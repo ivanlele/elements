@@ -121,8 +121,9 @@ static std::optional<int64_t> GetSignedTxinWeight(const CWallet* wallet, const C
                                                   const bool can_grind_r)
 {
     // If weight was provided, use that.
-    if (coin_control && coin_control->HasInputWeight(txin.prevout)) {
-        return coin_control->GetInputWeight(txin.prevout);
+    std::optional<int64_t> weight;
+    if (coin_control && (weight = coin_control->GetInputWeight(txin.prevout))) {
+        return weight.value();
     }
 
     // Otherwise, use the maximum satisfaction size provided by the descriptor.
@@ -284,7 +285,10 @@ util::Result<PreSelectedInputs> FetchSelectedInputs(const CWallet& wallet, const
     const bool can_grind_r = wallet.CanGrindR();
     std::map<COutPoint, CAmount> map_of_bump_fees = wallet.chain().calculateIndividualBumpFees(coin_control.ListSelected(), coin_selection_params.m_effective_feerate);
     for (const COutPoint& outpoint : coin_control.ListSelected()) {
-        int input_bytes = -1;
+        int64_t input_bytes = coin_control.GetInputWeight(outpoint).value_or(-1);
+        if (input_bytes != -1) {
+            input_bytes = GetVirtualTransactionSize(input_bytes, 0, 0);
+        }
         CTxOut txout;
         if (auto ptr_wtx = wallet.GetWalletTx(outpoint.hash)) {
             // Clearly invalid input, fail
@@ -292,7 +296,9 @@ util::Result<PreSelectedInputs> FetchSelectedInputs(const CWallet& wallet, const
                 return util::Error{strprintf(_("Invalid pre-selected input %s"), outpoint.ToString())};
             }
             txout = ptr_wtx->tx->vout.at(outpoint.n);
-            input_bytes = CalculateMaximumSignedInputSize(txout, &wallet, &coin_control);
+            if (input_bytes == -1) {
+                input_bytes = CalculateMaximumSignedInputSize(txout, &wallet, &coin_control);
+            }
         } else {
             // The input is external. We did not find the tx in mapWallet.
             const auto out{coin_control.GetExternalOutput(outpoint)};
@@ -317,11 +323,6 @@ util::Result<PreSelectedInputs> FetchSelectedInputs(const CWallet& wallet, const
             if (!txout.nValue.IsExplicit() || !txout.nAsset.IsExplicit()) {
                 return util::Error{strprintf(_("Value or asset is not explicit for pre-selected input %s"), outpoint.ToString())};
             }
-        }
-
-        // If available, override calculated size with coin control specified size
-        if (coin_control.HasInputWeight(outpoint)) {
-            input_bytes = GetVirtualTransactionSize(coin_control.GetInputWeight(outpoint), 0, 0);
         }
 
         if (input_bytes == -1) {
@@ -1179,7 +1180,7 @@ static bool fillBlindDetails(BlindDetails* det, CWallet* wallet, CMutableTransac
 static util::Result<CreatedTransactionResult> CreateTransactionInternal(
         CWallet& wallet,
         const std::vector<CRecipient>& vecSend,
-        int change_pos,
+        std::optional<unsigned int> change_pos,
         const CCoinControl& coin_control,
         bool sign,
         BlindDetails* blind_details,
@@ -1196,11 +1197,12 @@ static util::Result<CreatedTransactionResult> CreateTransactionInternal(
 
     AssertLockHeld(wallet.cs_wallet);
 
-    // out variables, to be packed into returned result structure
-    int nChangePosInOut = change_pos;
-
     FastRandomContext rng_fast;
     CMutableTransaction txNew; // The resulting transaction that we make
+
+    if (coin_control.m_version) {
+        txNew.nVersion = coin_control.m_version.value();
+    }
 
     CoinSelectionParams coin_selection_params{rng_fast}; // Parameters for coin selection, init with dummy
     coin_selection_params.m_avoid_partial_spends = coin_control.m_avoid_partial_spends;
@@ -1513,17 +1515,17 @@ static util::Result<CreatedTransactionResult> CreateTransactionInternal(
     // Uniformly randomly place change outputs for all assets, except that the policy-asset
     // change may have a fixed position.
     std::vector<std::optional<CAsset>> fixed_change_pos{txNew.vout.size() + map_change_and_fee.size()};
-    if (nChangePosInOut == -1) {
+    if (!change_pos) {
        // randomly set policyasset change position
-    } else if ((unsigned int)nChangePosInOut >= fixed_change_pos.size()) {
+    } else if ((unsigned int)*change_pos >= fixed_change_pos.size()) {
         return util::Error{_("Transaction change output index out of range")};
     } else {
-        fixed_change_pos[nChangePosInOut] = policyAsset;
+        fixed_change_pos[*change_pos] = policyAsset;
     }
 
     for (const auto& asset_change_and_fee : map_change_and_fee) {
         // No need to randomly set the policyAsset change if has been set manually
-        if (nChangePosInOut >= 0 && asset_change_and_fee.first == policyAsset) {
+        if (change_pos && asset_change_and_fee.first == policyAsset) {
             continue;
         }
 
@@ -1534,7 +1536,7 @@ static util::Result<CreatedTransactionResult> CreateTransactionInternal(
 
         fixed_change_pos[index] = asset_change_and_fee.first;
         if (asset_change_and_fee.first == policyAsset) {
-            nChangePosInOut = index;
+            change_pos = index;
         }
     }
 
@@ -1604,8 +1606,8 @@ static util::Result<CreatedTransactionResult> CreateTransactionInternal(
             }
         }
     }
-    assert(nChangePosInOut != -1);
-    auto change_position = txNew.vout.begin() + nChangePosInOut;
+    assert(change_pos);
+    auto change_position = txNew.vout.begin() + *change_pos;
     // end ELEMENTS
 
     // Set token input if reissuing
@@ -1618,6 +1620,27 @@ static util::Result<CreatedTransactionResult> CreateTransactionInternal(
     // Shuffle selected coins and fill in final vin
     std::vector<std::shared_ptr<COutput>> selected_coins = result.GetShuffledInputVector();
 
+    if (coin_control.HasSelected() && coin_control.HasSelectedOrder()) {
+        // When there are preselected inputs, we need to move them to be the first UTXOs
+        // and have them be in the order selected. We can use stable_sort for this, where we
+        // compare with the positions stored in coin_control. The COutputs that have positions
+        // will be placed before those that don't, and those positions will be in order.
+        std::stable_sort(selected_coins.begin(), selected_coins.end(),
+            [&coin_control](const std::shared_ptr<COutput>& a, const std::shared_ptr<COutput>& b) {
+                auto a_pos = coin_control.GetSelectionPos(a->outpoint);
+                auto b_pos = coin_control.GetSelectionPos(b->outpoint);
+                if (a_pos.has_value() && b_pos.has_value()) {
+                    return a_pos.value() < b_pos.value();
+                } else if (a_pos.has_value() && !b_pos.has_value()) {
+                    return true;
+                } else {
+                    return false;
+                }
+            });
+    }
+
+    txNew.witness.vtxinwit.reserve(selected_coins.size()); // ELEMENTS
+
     // The sequence number is set to non-maxint so that DiscourageFeeSniping
     // works.
     //
@@ -1626,16 +1649,43 @@ static util::Result<CreatedTransactionResult> CreateTransactionInternal(
     // to avoid conflicting with other possible uses of nSequence,
     // and in the spirit of "smallest possible change from prior
     // behavior."
-    const uint32_t nSequence{coin_control.m_signal_bip125_rbf.value_or(wallet.m_signal_rbf) ? MAX_BIP125_RBF_SEQUENCE : CTxIn::MAX_SEQUENCE_NONFINAL};
+    bool use_anti_fee_sniping = true;
+    const uint32_t default_sequence{coin_control.m_signal_bip125_rbf.value_or(wallet.m_signal_rbf) ? MAX_BIP125_RBF_SEQUENCE : CTxIn::MAX_SEQUENCE_NONFINAL};
     for (const auto& coin : selected_coins) {
-        txNew.vin.emplace_back(coin->outpoint, CScript(), nSequence);
+        std::optional<uint32_t> sequence = coin_control.GetSequence(coin->outpoint);
+        if (sequence) {
+            // If an input has a preset sequence, we can't do anti-fee-sniping
+            use_anti_fee_sniping = false;
+        }
+        txNew.vin.emplace_back(coin->outpoint, CScript{}, sequence.value_or(default_sequence));
 
+        auto scripts = coin_control.GetScripts(coin->outpoint);
+        if (scripts.first) {
+            txNew.vin.back().scriptSig = *scripts.first;
+        }
+        if (scripts.second) {
+            txNew.witness.vtxinwit.back().scriptWitness = *scripts.second;
+        }
+
+        auto pegin_witness = coin_control.GetPeginWitness(coin->outpoint);
+        if (pegin_witness) {
+            txNew.vin.back().m_is_pegin = true;
+            txNew.witness.vtxinwit.emplace_back();
+            txNew.witness.vtxinwit.back().m_pegin_witness = *pegin_witness;
+        }
         if (issuance_details && coin->asset == issuance_details->reissuance_token) {
             reissuance_index = txNew.vin.size() - 1;
             token_blinding = coin->bf_asset;
         }
     }
-    DiscourageFeeSniping(txNew, rng_fast, wallet.chain(), wallet.GetLastBlockHash(), wallet.GetLastBlockHeight());
+    if (coin_control.m_locktime) {
+        txNew.nLockTime = coin_control.m_locktime.value();
+        // If we have a locktime set, we can't use anti-fee-sniping
+        use_anti_fee_sniping = false;
+    }
+    if (use_anti_fee_sniping) {
+        DiscourageFeeSniping(txNew, rng_fast, wallet.chain(), wallet.GetLastBlockHash(), wallet.GetLastBlockHeight());
+    }
 
     // ELEMENTS add issuance details and blinding details
     std::vector<CKey> issuance_asset_keys;
@@ -1723,7 +1773,7 @@ static util::Result<CreatedTransactionResult> CreateTransactionInternal(
         }
         txNew = tx_blinded; // sigh, `fillBlindDetails` may have modified txNew
         // Update the change position to the new tx
-        change_position = txNew.vout.begin() + nChangePosInOut;
+        change_position = txNew.vout.begin() + *change_pos;
         int ret = BlindTransaction(blind_details->i_amount_blinds, blind_details->i_asset_blinds, blind_details->i_assets, blind_details->i_amounts, blind_details->o_amount_blinds, blind_details->o_asset_blinds, blind_details->o_pubkeys, issuance_asset_keys, issuance_token_keys, tx_blinded);
         assert(ret != -1);
         if (ret != blind_details->num_to_blind) {
@@ -1756,7 +1806,7 @@ static util::Result<CreatedTransactionResult> CreateTransactionInternal(
     CAmount change_amount = change_position->nValue.GetAmount();
     if (IsDust(*change_position, coin_selection_params.m_discard_feerate) || change_amount <= coin_selection_params.m_cost_of_change)
     {
-        bool was_blinded = blind_details && blind_details->o_pubkeys[nChangePosInOut].IsValid();
+        bool was_blinded = blind_details && blind_details->o_pubkeys[*change_pos].IsValid();
 
         // If the change was blinded, and was the only blinded output, we cannot drop it
         // without causing the transaction to fail to balance. So keep it, and merely
@@ -1768,16 +1818,16 @@ static util::Result<CreatedTransactionResult> CreateTransactionInternal(
         } else {
             txNew.vout.erase(change_position);
 
-            fixed_change_pos[nChangePosInOut] = std::nullopt;
-            tx_blinded.vout.erase(tx_blinded.vout.begin() + nChangePosInOut);
-            if (tx_blinded.witness.vtxoutwit.size() > (unsigned) nChangePosInOut) {
-                tx_blinded.witness.vtxoutwit.erase(tx_blinded.witness.vtxoutwit.begin() + nChangePosInOut);
+            fixed_change_pos[*change_pos] = std::nullopt;
+            tx_blinded.vout.erase(tx_blinded.vout.begin() + *change_pos);
+            if (tx_blinded.witness.vtxoutwit.size() > *change_pos) {
+                tx_blinded.witness.vtxoutwit.erase(tx_blinded.witness.vtxoutwit.begin() + *change_pos);
             }
             if (blind_details) {
 
-                blind_details->o_amounts.erase(blind_details->o_amounts.begin() + nChangePosInOut);
-                blind_details->o_assets.erase(blind_details->o_assets.begin() + nChangePosInOut);
-                blind_details->o_pubkeys.erase(blind_details->o_pubkeys.begin() + nChangePosInOut);
+                blind_details->o_amounts.erase(blind_details->o_amounts.begin() + *change_pos);
+                blind_details->o_assets.erase(blind_details->o_assets.begin() + *change_pos);
+                blind_details->o_pubkeys.erase(blind_details->o_pubkeys.begin() + *change_pos);
                 // If change_amount == 0, we did not increment num_to_blind initially
                 // and therefore do not need to decrement it here.
                 if (was_blinded) {
@@ -1801,7 +1851,7 @@ static util::Result<CreatedTransactionResult> CreateTransactionInternal(
             }
         }
         change_amount = 0;
-        nChangePosInOut = -1;
+        change_pos = std::nullopt;
 
         // Because we have dropped this change, the tx size and required fee will be different, so let's recalculate those
         tx_sizes = CalculateMaximumSignedTxSize(CTransaction(tx_blinded), &wallet, &coin_control);
@@ -1830,11 +1880,11 @@ static util::Result<CreatedTransactionResult> CreateTransactionInternal(
     // Reduce output values for subtractFeeFromAmount
     if (coin_selection_params.m_subtract_fee_outputs) {
         CAmount to_reduce = fee_needed + change_amount - map_change_and_fee.at(policyAsset);
-        int i = 0;
+        unsigned int i = 0;
         bool fFirst = true;
         for (const auto& recipient : vecSend)
         {
-            if (i == nChangePosInOut) {
+            if (change_pos && i == *change_pos) {
                 ++i;
             }
             CTxOut& txout = txNew.vout[i];
@@ -2004,13 +2054,13 @@ static util::Result<CreatedTransactionResult> CreateTransactionInternal(
               feeCalc.est.fail.start, feeCalc.est.fail.end,
               (feeCalc.est.fail.totalConfirmed + feeCalc.est.fail.inMempool + feeCalc.est.fail.leftMempool) > 0.0 ? 100 * feeCalc.est.fail.withinTarget / (feeCalc.est.fail.totalConfirmed + feeCalc.est.fail.inMempool + feeCalc.est.fail.leftMempool) : 0.0,
               feeCalc.est.fail.withinTarget, feeCalc.est.fail.totalConfirmed, feeCalc.est.fail.inMempool, feeCalc.est.fail.leftMempool);
-    return CreatedTransactionResult(tx, current_fee, nChangePosInOut, feeCalc);
+    return CreatedTransactionResult(tx, current_fee, change_pos, feeCalc);
 }
 
 util::Result<CreatedTransactionResult> CreateTransaction(
         CWallet& wallet,
         const std::vector<CRecipient>& vecSend,
-        int change_pos,
+        std::optional<unsigned int> change_pos,
         const CCoinControl& coin_control,
         bool sign,
         BlindDetails* blind_details,
@@ -2035,7 +2085,7 @@ util::Result<CreatedTransactionResult> CreateTransaction(
 
     auto res = CreateTransactionInternal(wallet, vecSend, change_pos, coin_control, sign, blind_details, issuance_details);
     TRACE4(coin_selection, normal_create_tx_internal, wallet.GetName().c_str(), bool(res),
-           res ? res->fee : 0, res ? res->change_pos : 0);
+           res ? res->fee : 0, res && res->change_pos.has_value() ? *res->change_pos : 0);
     if (!res) return res;
     const auto& txr_ungrouped = *res;
     // try with avoidpartialspends unless it's enabled already
@@ -2046,10 +2096,9 @@ util::Result<CreatedTransactionResult> CreateTransaction(
 
         // ELEMENTS: only for unblinded transactions
         // Reuse the change destination from the first creation attempt to avoid skipping BIP44 indexes
-        const int ungrouped_change_pos = txr_ungrouped.change_pos;
-        if (ungrouped_change_pos != -1 && !blind_details) {
-            const CAsset& asset = txr_ungrouped.tx->vout[ungrouped_change_pos].nAsset.GetAsset();
-            ExtractDestination(txr_ungrouped.tx->vout[ungrouped_change_pos].scriptPubKey, tmp_cc.destChange[asset]);
+        if (txr_ungrouped.change_pos && !blind_details) {
+            const CAsset& asset = txr_ungrouped.tx->vout[*txr_ungrouped.change_pos].nAsset.GetAsset();
+            ExtractDestination(txr_ungrouped.tx->vout[*txr_ungrouped.change_pos].scriptPubKey, tmp_cc.destChange[asset]);
         }
 
         BlindDetails blind_details2;
@@ -2058,7 +2107,7 @@ util::Result<CreatedTransactionResult> CreateTransaction(
         // if fee of this alternative one is within the range of the max fee, we use this one
         const bool use_aps{txr_grouped.has_value() ? (txr_grouped->fee <= txr_ungrouped.fee + wallet.m_max_aps_fee) : false};
         TRACE5(coin_selection, aps_create_tx_internal, wallet.GetName().c_str(), use_aps, txr_grouped.has_value(),
-               txr_grouped.has_value() ? txr_grouped->fee : 0, txr_grouped.has_value() ? txr_grouped->change_pos : 0);
+               txr_grouped.has_value() ? txr_grouped->fee : 0, txr_grouped.has_value() && txr_grouped->change_pos.has_value() ? *txr_grouped->change_pos : 0);
         if (txr_grouped) {
             wallet.WalletLogPrintf("Fee non-grouped = %lld, grouped = %lld, using %s\n",
                 txr_ungrouped.fee, txr_grouped->fee, use_aps ? "grouped" : "non-grouped");
@@ -2073,7 +2122,7 @@ util::Result<CreatedTransactionResult> CreateTransaction(
     return res;
 }
 
-bool FundTransaction(CWallet& wallet, CMutableTransaction& tx, CAmount& nFeeRet, int& nChangePosInOut, bilingual_str& error, bool lockUnspents, const std::set<int>& setSubtractFeeFromOutputs, CCoinControl coinControl)
+util::Result<CreatedTransactionResult> FundTransaction(CWallet& wallet, const CMutableTransaction& tx, std::optional<unsigned int> change_pos, bool lockUnspents, const std::set<int>& setSubtractFeeFromOutputs, CCoinControl coinControl)
 {
     std::vector<CRecipient> vecSend;
 
@@ -2083,8 +2132,7 @@ bool FundTransaction(CWallet& wallet, CMutableTransaction& tx, CAmount& nFeeRet,
 
         // ELEMENTS:
         if (!txOut.nValue.IsExplicit() || !txOut.nAsset.IsExplicit()) {
-            error = _("Pre-funded amounts must be non-blinded");
-            return false;
+            return util::Error{_("Pre-funded amounts must be non-blinded")};
         }
 
         // Fee outputs should not be added to avoid overpayment of fees
@@ -2097,6 +2145,12 @@ bool FundTransaction(CWallet& wallet, CMutableTransaction& tx, CAmount& nFeeRet,
         CRecipient recipient = {dest, txOut.nValue.GetAmount(), txOut.nAsset.GetAsset(), CPubKey(txOut.nNonce.vchCommitment), setSubtractFeeFromOutputs.count(idx) == 1};
         vecSend.push_back(recipient);
     }
+
+    // Set the user desired locktime
+    coinControl.m_locktime = tx.nLockTime;
+
+    // Set the user desired version
+    coinControl.m_version = tx.nVersion;
 
     // Acquire the locks to prevent races to the new locked unspents between the
     // CreateTransaction call and LockCoin calls (when lockUnspents is true).
@@ -2121,73 +2175,67 @@ bool FundTransaction(CWallet& wallet, CMutableTransaction& tx, CAmount& nFeeRet,
             if (tx.witness.vtxinwit.size() != tx.vin.size() || !IsValidPeginWitness(tx.witness.vtxinwit[i].m_pegin_witness, fedpegscripts, txin.prevout, err, false)) {
                 throw JSONRPCError(RPC_INVALID_PARAMETER, strprintf("Transaction contains invalid peg-in input: %s", err));
             }
-            CScriptWitness& pegin_witness = tx.witness.vtxinwit[i].m_pegin_witness;
-            CTxOut txout = GetPeginOutputFromWitness(pegin_witness);
-            coinControl.SelectExternal(txin.prevout, txout);
         }
     }
     wallet.chain().findCoins(coins);
 
-    for (const CTxIn& txin : tx.vin) {
+    for (size_t i = 0; i < tx.vin.size(); i++) {
+        const CTxIn& txin = tx.vin[i];
         const auto& outPoint = txin.prevout;
+        PreselectedInput& preset_txin = coinControl.Select(outPoint);
         if (wallet.IsMine(outPoint)) {
             // ELEMENTS: check there is an output for each input asset
             const auto wtx = wallet.GetWalletTx(outPoint.hash);
             const auto asset = wtx->GetOutputAsset(wallet, outPoint.n);
             if (asset != ::policyAsset && output_assets.count(asset) == 0) {
-                error = _(strprintf("Transaction is missing an output for input asset %s", asset.GetHex()).c_str());
-                return false;
+                return util::Error{_(strprintf("Transaction is missing an output for input asset %s", asset.GetHex()).c_str())};
             }
-            // The input was found in the wallet, so select as internal
-            coinControl.Select(outPoint);
         } else if (txin.m_is_pegin) {
-            // ELEMENTS: input is pegin so nothing to select
+            // ELEMENTS: input is pegin
+            CTxOut txout = GetPeginOutputFromWitness(tx.witness.vtxinwit[i].m_pegin_witness);
+            preset_txin.SetTxOut(txout);
+            preset_txin.SetPeginWitness(tx.witness.vtxinwit[i].m_pegin_witness);
         } else if (coins[outPoint].out.IsNull()) {
-            error = _("Unable to find UTXO for external input");
-            return false;
+            return util::Error{_("Unable to find UTXO for external input")};
         } else {
             // The input was not in the wallet, but is in the UTXO set, so select as external
-            coinControl.SelectExternal(outPoint, coins[outPoint].out);
+            preset_txin.SetTxOut(coins[outPoint].out);
+        }
+        preset_txin.SetSequence(txin.nSequence);
+        preset_txin.SetScriptSig(txin.scriptSig);
+        if (tx.witness.vtxinwit.size() > i && !tx.witness.vtxinwit[i].scriptWitness.IsNull()) {
+            preset_txin.SetScriptWitness(tx.witness.vtxinwit[i].scriptWitness);
         }
     }
 
     auto blind_details = g_con_elementsmode ? std::make_unique<BlindDetails>() : nullptr;
-    auto res = CreateTransaction(wallet, vecSend, nChangePosInOut, coinControl, false, blind_details.get());
+    auto res = CreateTransaction(wallet, vecSend, change_pos, coinControl, false, blind_details.get());
     if (!res) {
-        error = util::ErrorString(res);
-        return false;
+        return res;
     }
     const auto& txr = *res;
     CTransactionRef tx_new = txr.tx;
-    nFeeRet = txr.fee;
-    nChangePosInOut = txr.change_pos;
 
     // Wipe outputs and output witness and re-add one by one
-    tx.vout.clear();
-    tx.witness.vtxoutwit.clear();
-    for (unsigned int i = 0; i < tx_new->vout.size(); i++) {
-        const CTxOut& out = tx_new->vout[i];
-        tx.vout.push_back(out);
-        if (tx_new->witness.vtxoutwit.size() > i) {
-            // We want to re-add previously existing outwitnesses
-            // even though we don't create any new ones
-            const CTxOutWitness& outwit = tx_new->witness.vtxoutwit[i];
-            tx.witness.vtxoutwit.push_back(outwit);
-        }
-    }
+    // tx.vout.clear();
+    // tx.witness.vtxoutwit.clear();
+    // for (unsigned int i = 0; i < tx_new->vout.size(); i++) {
+    //     const CTxOut& out = tx_new->vout[i];
+    //     tx.vout.push_back(out);
+    //     if (tx_new->witness.vtxoutwit.size() > i) {
+    //         // We want to re-add previously existing outwitnesses
+    //         // even though we don't create any new ones
+    //         const CTxOutWitness& outwit = tx_new->witness.vtxoutwit[i];
+    //         tx.witness.vtxoutwit.push_back(outwit);
+    //     }
+    // }
 
-    // Add new txins while keeping original txin scriptSig/order.
-    for (const CTxIn& txin : tx_new->vin) {
-        if (!coinControl.IsSelected(txin.prevout)) {
-            tx.vin.push_back(txin);
-
-        }
-        if (lockUnspents) {
+    if (lockUnspents) {
+        for (const CTxIn& txin : res->tx->vin) {
             wallet.LockCoin(txin.prevout);
         }
-
     }
 
-    return true;
+    return res;
 }
 } // namespace wallet

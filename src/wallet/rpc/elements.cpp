@@ -1385,11 +1385,10 @@ static CTransactionRef SendGenerationTransaction(const CScript& asset_script, co
         vecSend.push_back(recipient);
     }
 
-    constexpr int RANDOM_CHANGE_POSITION = -1;
     bilingual_str error;
     CCoinControl dummy_control;
     BlindDetails blind_details;
-    util::Result<CreatedTransactionResult> txr = CreateTransaction(*pwallet, vecSend, RANDOM_CHANGE_POSITION,
+    util::Result<CreatedTransactionResult> txr = CreateTransaction(*pwallet, vecSend, std::nullopt,
                 dummy_control, true, &blind_details, issuance_details);
     if (!txr) {
         throw JSONRPCError(RPC_WALLET_ERROR, error.original);

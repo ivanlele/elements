@@ -169,10 +169,9 @@ UniValue SendMoney(CWallet& wallet, const CCoinControl &coin_control, std::vecto
     std::shuffle(recipients.begin(), recipients.end(), FastRandomContext());
 
     // Send
-    constexpr int RANDOM_CHANGE_POSITION = -1;
     auto blind_details = g_con_elementsmode ? std::make_unique<BlindDetails>() : nullptr;
     if (blind_details) blind_details->ignore_blind_failure = ignore_blind_fail;
-    auto res = CreateTransaction(wallet, recipients, RANDOM_CHANGE_POSITION, coin_control, true, blind_details.get());
+    auto res = CreateTransaction(wallet, recipients, std::nullopt, coin_control, true, blind_details.get());
     if (!res) {
         throw JSONRPCError(RPC_WALLET_INSUFFICIENT_FUNDS, util::ErrorString(res).original);
     }
@@ -542,13 +541,13 @@ static std::vector<RPCArg> FundTxDoc(bool solving_data = true)
     return args;
 }
 
-void FundTransaction(CWallet& wallet, CMutableTransaction& tx, CAmount& fee_out, int& change_position, const UniValue& options, CCoinControl& coinControl, bool override_min_fee)
+CreatedTransactionResult FundTransaction(CWallet& wallet, const CMutableTransaction& tx, const UniValue& options, CCoinControl& coinControl, bool override_min_fee)
 {
     // Make sure the results are valid at least up to the most recent block
     // the user could have gotten from another RPC command prior to now
     wallet.BlockUntilSyncedToCurrentChain();
 
-    change_position = -1;
+    std::optional<unsigned int> change_position;
     bool lockUnspents = false;
     UniValue subtractFeeFromOutputs;
     std::set<int> setSubtractFeeFromOutputs;
@@ -632,7 +631,11 @@ void FundTransaction(CWallet& wallet, CMutableTransaction& tx, CAmount& fee_out,
         }
 
         if (options.exists("changePosition") || options.exists("change_position")) {
-            change_position = (options.exists("change_position") ? options["change_position"] : options["changePosition"]).getInt<int>();
+            int pos = (options.exists("change_position") ? options["change_position"] : options["changePosition"]).getInt<int>();
+            if (pos < 0 || (unsigned int)pos > tx.vout.size()) {
+                throw JSONRPCError(RPC_INVALID_PARAMETER, "changePosition out of bounds");
+            }
+            change_position = (unsigned int)pos;
         }
 
         if (options.exists("change_type")) {
@@ -785,9 +788,6 @@ void FundTransaction(CWallet& wallet, CMutableTransaction& tx, CAmount& fee_out,
     if (tx.vout.size() == 0)
         throw JSONRPCError(RPC_INVALID_PARAMETER, "TX must have at least one output");
 
-    if (change_position != -1 && (change_position < 0 || (unsigned int)change_position > tx.vout.size()))
-        throw JSONRPCError(RPC_INVALID_PARAMETER, "changePosition out of bounds");
-
     for (unsigned int idx = 0; idx < subtractFeeFromOutputs.size(); idx++) {
         int pos = subtractFeeFromOutputs[idx].getInt<int>();
         if (setSubtractFeeFromOutputs.count(pos))
@@ -799,11 +799,11 @@ void FundTransaction(CWallet& wallet, CMutableTransaction& tx, CAmount& fee_out,
         setSubtractFeeFromOutputs.insert(pos);
     }
 
-    bilingual_str error;
-
-    if (!FundTransaction(wallet, tx, fee_out, change_position, error, lockUnspents, setSubtractFeeFromOutputs, coinControl)) {
-        throw JSONRPCError(RPC_WALLET_ERROR, error.original);
+    auto txr = FundTransaction(wallet, tx, change_position, lockUnspents, setSubtractFeeFromOutputs, coinControl);
+    if (!txr) {
+        throw JSONRPCError(RPC_WALLET_ERROR, ErrorString(txr).original);
     }
+    return *txr;
 }
 
 static void SetOptionsInputWeights(const UniValue& inputs, UniValue& options)
@@ -926,17 +926,15 @@ RPCHelpMan fundrawtransaction()
         throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "TX decode failed");
     }
 
-    CAmount fee;
-    int change_position;
     CCoinControl coin_control;
     // Automatically select (additional) coins. Can be overridden by options.add_inputs.
     coin_control.m_allow_other_inputs = true;
-    FundTransaction(*pwallet, tx, fee, change_position, request.params[1], coin_control, /*override_min_fee=*/true);
+    auto txr = FundTransaction(*pwallet, tx, request.params[1], coin_control, /*override_min_fee=*/true);
 
     UniValue result(UniValue::VOBJ);
-    result.pushKV("hex", EncodeHexTx(CTransaction(tx)));
-    result.pushKV("fee", ValueFromAmount(fee));
-    result.pushKV("changepos", change_position);
+    result.pushKV("hex", EncodeHexTx(*txr.tx));
+    result.pushKV("fee", ValueFromAmount(txr.fee));
+    result.pushKV("changepos", txr.change_pos ? (int)*txr.change_pos : -1);
 
     return result;
 },
@@ -1361,8 +1359,6 @@ RPCHelpMan send()
             PreventOutdatedOptions(options);
 
 
-            CAmount fee;
-            int change_position;
             bool rbf{options.exists("replaceable") ? options["replaceable"].get_bool() : pwallet->m_signal_rbf};
             CMutableTransaction rawTx = ConstructTransaction(options["inputs"], request.params[0], options["locktime"], rbf, pwallet->chain().getTip(), nullptr /* output_pubkey_out */, true /* allow_peg_in */);
             CCoinControl coin_control;
@@ -1370,9 +1366,9 @@ RPCHelpMan send()
             // be overridden by options.add_inputs.
             coin_control.m_allow_other_inputs = rawTx.vin.size() == 0;
             SetOptionsInputWeights(options["inputs"], options);
-            FundTransaction(*pwallet, rawTx, fee, change_position, options, coin_control, /*override_min_fee=*/false);
+            auto txr = FundTransaction(*pwallet, rawTx, options, coin_control, /*override_min_fee=*/false);
 
-            return FinishTransaction(pwallet, options, rawTx);
+            return FinishTransaction(pwallet, options, CMutableTransaction(*txr.tx));
         }
     };
 }
@@ -1855,8 +1851,6 @@ RPCHelpMan walletcreatefundedpsbt()
 
     UniValue options{request.params[3].isNull() ? UniValue::VOBJ : request.params[3]};
 
-    CAmount fee;
-    int change_position;
     const UniValue &replaceable_arg = options["replaceable"];
     const bool rbf{replaceable_arg.isNull() ? wallet.m_signal_rbf : replaceable_arg.get_bool()};
     // It's hard to control the behavior of FundTransaction, so we will wait
@@ -1917,22 +1911,22 @@ RPCHelpMan walletcreatefundedpsbt()
         }
     }
     SetOptionsInputWeights(request.params[0], options);
-    FundTransaction(wallet, rawTx, fee, change_position, options, coin_control, /*override_min_fee=*/true);
+    auto txr = FundTransaction(wallet, rawTx, options, coin_control, /*override_min_fee=*/true);
     // Find an input that is ours
     unsigned int blinder_index = 0;
     {
         LOCK(wallet.cs_wallet);
-        for (; blinder_index < rawTx.vin.size(); ++blinder_index) {
-            const CTxIn& txin = rawTx.vin[blinder_index];
+        for (; blinder_index < txr.tx->vin.size(); ++blinder_index) {
+            const CTxIn& txin = txr.tx->vin[blinder_index];
             if (InputIsMine(wallet, txin) != ISMINE_NO) {
                 break;
             }
         }
     }
-    CHECK_NONFATAL (blinder_index < rawTx.vin.size()); // We added inputs, or existing inputs are ours, we should have a blinder index at this point.
+    CHECK_NONFATAL(blinder_index < txr.tx->vin.size()); // We added inputs, or existing inputs are ours, we should have a blinder index at this point.
     // It may add outputs (change, and in some edge case OP_RETURN) which need to be
     // blinded. So pull these into `psbt_outs`.
-    for (const CTxOut& txout : rawTx.vout) {
+    for (const CTxOut& txout : txr.tx->vout) {
         if (!txout.nNonce.IsNull() && !psbt_outs.count(txout)) {
             PSBTOutput new_out{2}; // psbtv2 output
             new_out.m_blinding_pubkey.Set(txout.nNonce.vchCommitment.begin(), txout.nNonce.vchCommitment.end());
@@ -1940,10 +1934,10 @@ RPCHelpMan walletcreatefundedpsbt()
             psbt_outs.insert(std::make_pair(txout, new_out));
         }
     }
-    PartiallySignedTransaction psbtx(rawTx, psbt_version);
-    for (unsigned int i = 0; i < rawTx.vout.size(); ++i) {
+    PartiallySignedTransaction psbtx(CMutableTransaction(*txr.tx), psbt_version);
+    for (unsigned int i = 0; i < txr.tx->vout.size(); ++i) {
         PSBTOutput& output = psbtx.outputs[i];
-        auto it = psbt_outs.find(rawTx.vout.at(i));
+        auto it = psbt_outs.find(txr.tx->vout.at(i));
         if (it != psbt_outs.end()) {
             PSBTOutput& construct_psbt_out = it->second;
 
@@ -1989,8 +1983,8 @@ RPCHelpMan walletcreatefundedpsbt()
 
     UniValue result(UniValue::VOBJ);
     result.pushKV("psbt", EncodeBase64(ssTx.str()));
-    result.pushKV("fee", ValueFromAmount(fee));
-    result.pushKV("changepos", change_position);
+    result.pushKV("fee", ValueFromAmount(txr.fee));
+    result.pushKV("changepos", txr.change_pos ? (int)*txr.change_pos : -1);
     return result;
 },
     };

@@ -27,14 +27,13 @@ BOOST_FIXTURE_TEST_CASE(SubtractFee, TestChain100Setup)
     // leftover input amount which would have been change to the recipient
     // instead of the miner.
     auto check_tx = [&wallet](CAmount leftover_input_amount) {
-        CRecipient recipient{PubKeyDestination({}), 50 * COIN - leftover_input_amount, CAsset(), CPubKey(),  /*subtract_fee=*/true};
-        constexpr int RANDOM_CHANGE_POSITION = -1;
+        CRecipient recipient{PubKeyDestination({}), 50 * COIN - leftover_input_amount, CAsset(), CPubKey(), /*subtract_fee=*/true};
         CCoinControl coin_control;
         coin_control.m_feerate.emplace(10000);
         coin_control.fOverrideFeeRate = true;
         // We need to use a change type with high cost of change so that the leftover amount will be dropped to fee instead of added as a change output
         coin_control.m_change_type = OutputType::LEGACY;
-        auto res = CreateTransaction(*wallet, {recipient}, RANDOM_CHANGE_POSITION, coin_control);
+        auto res = CreateTransaction(*wallet, {recipient}, std::nullopt, coin_control);
         BOOST_CHECK(res);
         const auto& txr = *res;
         BOOST_CHECK_EQUAL(txr.tx->vout.size(), 1);

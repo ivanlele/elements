@@ -1779,13 +1779,13 @@ bool CWallet::DummySignTx(CMutableTransaction &txNew, const std::vector<CTxOut> 
     {
         CTxIn& txin = txNew.vin[nIn];
         // If weight was provided, fill the input to that weight
-        if (coin_control && coin_control->HasInputWeight(txin.prevout)) {
+        if (coin_control && coin_control->GetInputWeight(txin.prevout)) {
             // ELEMENTS: ensure input witness is large enough for rare case in bumpfee
             if (txNew.witness.vtxinwit.size() <= nIn) {
                 txNew.witness.vtxinwit.resize(nIn + 1);
             }
             assert(txNew.witness.vtxinwit.size() > nIn);
-            if (!FillInputToWeight(txNew, nIn, coin_control->GetInputWeight(txin.prevout))) {
+            if (!FillInputToWeight(txNew, nIn, coin_control->GetInputWeight(txin.prevout).value())) {
                 return false;
             }
             nIn++;
