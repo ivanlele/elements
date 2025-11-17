@@ -171,7 +171,7 @@ UniValue SendMoney(CWallet& wallet, const CCoinControl &coin_control, std::vecto
     // Send
     auto blind_details = g_con_elementsmode ? std::make_unique<BlindDetails>() : nullptr;
     if (blind_details) blind_details->ignore_blind_failure = ignore_blind_fail;
-    auto res = CreateTransaction(wallet, recipients, std::nullopt, coin_control, true, blind_details.get());
+    auto res = CreateTransaction(wallet, recipients, /*change_pos=*/std::nullopt, coin_control, true, blind_details.get());
     if (!res) {
         throw JSONRPCError(RPC_WALLET_INSUFFICIENT_FUNDS, util::ErrorString(res).original);
     }
