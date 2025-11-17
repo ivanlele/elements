@@ -38,14 +38,13 @@
 #include <pow.h>
 #include <policy/policy.h>
 #include <policy/settings.h>
-#include <streams.h>
 #include <random.h>
 #include <rpc/blockchain.h>
 #include <rpc/server.h>
 #include <rpc/register.h>
 #include <scheduler.h>
 #include <script/sigcache.h>
-#include <shutdown.h>
+#include <streams.h>
 #include <test/util/net.h>
 #include <test/util/random.h>
 #include <test/util/txmempool.h>
@@ -113,6 +112,7 @@ BasicTestingSetup::BasicTestingSetup(const ChainType chainType, const std::vecto
         gArgs.SoftSetBoolArg("-validatepegin", false);
     }
 
+    m_node.shutdown = &m_interrupt;
     m_node.args = &gArgs;
     std::vector<const char*> arguments = Cat(
         {
@@ -198,7 +198,7 @@ ChainTestingSetup::ChainTestingSetup(const ChainType chainType, const std::vecto
 
     m_cache_sizes = CalculateCacheSizes(m_args);
 
-    m_node.notifications = std::make_unique<KernelNotifications>(m_node.exit_status);
+    m_node.notifications = std::make_unique<KernelNotifications>(*Assert(m_node.shutdown), m_node.exit_status);
 
     const ChainstateManager::Options chainman_opts{
         .chainparams = chainparams,
@@ -215,7 +215,7 @@ ChainTestingSetup::ChainTestingSetup(const ChainType chainType, const std::vecto
         .blocks_dir = m_args.GetBlocksDirPath(),
         .notifications = chainman_opts.notifications,
     };
-    m_node.chainman = std::make_unique<ChainstateManager>(m_node.kernel->interrupt, chainman_opts, blockman_opts);
+    m_node.chainman = std::make_unique<ChainstateManager>(*Assert(m_node.shutdown), chainman_opts, blockman_opts);
     m_node.chainman->m_blockman.m_block_tree_db = std::make_unique<BlockTreeDB>(DBParams{
         .path = m_args.GetDataDirNet() / "blocks" / "index",
         .cache_bytes = static_cast<size_t>(m_cache_sizes.block_tree_db),

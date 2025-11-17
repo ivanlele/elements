@@ -202,7 +202,8 @@ RPCHelpMan getpeginaddress()
         }
         throw JSONRPCError(RPC_INTERNAL_ERROR, message);
     }
-    node::KernelNotifications notifications{pwallet->chain().context()->exit_status};
+    auto context = pwallet->chain().context();
+    node::KernelNotifications notifications(*(context->shutdown), context->exit_status);
     ChainstateManager::Options chain_opts{
         .chainparams = chainparams,
         .datadir = gArgs.GetDataDirNet(),
