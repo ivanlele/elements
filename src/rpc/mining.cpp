@@ -419,7 +419,7 @@ static RPCHelpMan generateblock()
     obj.pushKV("hash", block_out->GetHash().GetHex());
     if (!process_new_block) {
         DataStream block_ser;
-        block_ser << RPCTxSerParams(*block_out);
+        block_ser << TX_WITH_WITNESS(*block_out);
         obj.pushKV("hex", HexStr(block_ser));
     }
     return obj;
@@ -1329,7 +1329,7 @@ static RPCHelpMan combineblocksigs()
     }
 
     DataStream ssBlock;
-    ssBlock << RPCTxSerParams(block);
+    ssBlock << TX_WITH_WITNESS(block);
     UniValue result(UniValue::VOBJ);
     result.pushKV("hex", HexStr(ssBlock));
     result.pushKV("complete", CheckProof(block, params));

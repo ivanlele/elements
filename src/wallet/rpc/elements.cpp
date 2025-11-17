@@ -873,7 +873,7 @@ static UniValue createrawpegin(const JSONRPCRequest& request, T_tx_ref& txBTCRef
     UniValue ret(UniValue::VOBJ);
 
     // Return hex
-    std::string strHex = EncodeHexTx(CTransaction(mtx), /*without_witness=*/RPCSerializationWithoutWitness());
+    std::string strHex = EncodeHexTx(CTransaction(mtx));
     ret.pushKV("hex", strHex);
 
     // Additional block lee-way to avoid bitcoin block races
