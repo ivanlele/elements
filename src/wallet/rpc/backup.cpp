@@ -2295,7 +2295,7 @@ RPCHelpMan dumpblindingkey()
         if (IsBlindDestination(dest) && pubkey != GetDestinationBlindingKey(dest)) {
             throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "CT address blinding key does not match the blinding key in wallet");
         }
-        return HexStr(Span<const unsigned char>(key.begin(), key.size()));
+        return HexStr(Span<const unsigned char>(UCharCast(key.begin()), key.size()));
     }
 
     throw JSONRPCError(RPC_WALLET_ERROR, "Blinding key for address is unknown");
@@ -2381,9 +2381,8 @@ RPCHelpMan dumpissuanceblindingkey()
         // We can actually deblind the input
         if (pcoin->GetIssuanceAmount(*pwallet, vindex, false) != -1 ) {
             CScript blindingScript(CScript() << OP_RETURN << std::vector<unsigned char>(pcoin->tx->vin[vindex].prevout.hash.ToUint256().begin(), pcoin->tx->vin[vindex].prevout.hash.ToUint256().end()) << pcoin->tx->vin[vindex].prevout.n);
-            CKey key;
-            key = wallet->GetBlindingKey(&blindingScript);
-            return HexStr(Span<const unsigned char>(key.begin(), key.size()));
+            CKey key = wallet->GetBlindingKey(&blindingScript);
+            return HexStr(Span<const unsigned char>(UCharCast(key.begin()), key.size()));
         } else {
             // We don't know how to deblind this using our wallet
             throw JSONRPCError(RPC_WALLET_ERROR, "Unable to unblind issuance with wallet blinding key.");

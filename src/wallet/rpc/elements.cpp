@@ -714,7 +714,7 @@ RPCHelpMan sendtomainchain_pak()
 
     //Create, verify whitelist proof
     secp256k1_whitelist_signature sig;
-    if(secp256k1_whitelist_sign(secp256k1_ctx, &sig, &paklist.OnlineKeys()[0], &paklist.OfflineKeys()[0], paklist.size(), &btcpub_secp, masterOnlineKey.begin(), &tweakSum[0], whitelistindex) != 1) {
+    if(secp256k1_whitelist_sign(secp256k1_ctx, &sig, &paklist.OnlineKeys()[0], &paklist.OfflineKeys()[0], paklist.size(), &btcpub_secp, UCharCast(masterOnlineKey.begin()), &tweakSum[0], whitelistindex) != 1) {
         throw JSONRPCError(RPC_WALLET_ERROR, "Pegout authorization proof signing failed");
     }
 
@@ -1794,7 +1794,7 @@ RPCHelpMan generatepegoutproof()
         throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid summed private key encoding");
     }
 
-    std::vector<unsigned char> sumprivkeybytes(summedSecret.begin(), summedSecret.end());
+    std::vector<unsigned char> sumprivkeybytes(UCharCast(summedSecret.begin()), UCharCast(summedSecret.end()));
     std::vector<unsigned char> btcpubkeybytes = ParseHex(request.params[1].get_str());
     std::vector<unsigned char> onlinepubkeybytes = ParseHex(request.params[2].get_str());
 
@@ -1838,7 +1838,7 @@ RPCHelpMan generatepegoutproof()
 
     //Create, verify whitelist proof
     secp256k1_whitelist_signature sig;
-    if(secp256k1_whitelist_sign(secp256k1_ctx, &sig, &paklist.OnlineKeys()[0], &paklist.OfflineKeys()[0], paklist.size(), &btcpubkey, masterOnlineKey.begin(), &sumprivkeybytes[0], whitelistindex) != 1)
+    if(secp256k1_whitelist_sign(secp256k1_ctx, &sig, &paklist.OnlineKeys()[0], &paklist.OfflineKeys()[0], paklist.size(), &btcpubkey, UCharCast(masterOnlineKey.begin()), &sumprivkeybytes[0], whitelistindex) != 1)
         throw JSONRPCError(RPC_WALLET_ERROR, "Pegout authorization proof signing failed");
 
     if (secp256k1_whitelist_verify(secp256k1_ctx, &sig, &paklist.OnlineKeys()[0], &paklist.OfflineKeys()[0], paklist.size(), &btcpubkey) != 1)
@@ -1916,8 +1916,8 @@ RPCHelpMan getpegoutkeys()
     CPubKey bitcoinpubkey = bitcoinkey.GetPubKey();
     CHECK_NONFATAL(bitcoinkey.VerifyPubKey(bitcoinpubkey));
 
-    std::vector<unsigned char> pegoutkeybytes(pegoutkey.begin(), pegoutkey.end());
-    std::vector<unsigned char> pegoutsubkeybytes(bitcoinkey.begin(), bitcoinkey.end());
+    std::vector<unsigned char> pegoutkeybytes(UCharCast(pegoutkey.begin()), UCharCast(pegoutkey.end()));
+    std::vector<unsigned char> pegoutsubkeybytes(UCharCast(bitcoinkey.begin()), UCharCast(bitcoinkey.end()));
 
     if (!secp256k1_ec_seckey_tweak_add(secp256k1_ctx, &pegoutkeybytes[0], &pegoutsubkeybytes[0]))
         throw JSONRPCError(RPC_WALLET_ERROR, "Summed key invalid");

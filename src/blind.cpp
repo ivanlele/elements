@@ -124,7 +124,7 @@ bool UnblindConfidentialPair(const CKey& blinding_key, const CConfidentialValue&
         // Use blinding key directly, and don't commit to a scriptpubkey
         // This is used for issuance inputs.
         blank_nonce = true;
-        nonce = uint256(std::vector<unsigned char>(blinding_key.begin(), blinding_key.end()));
+        nonce = uint256(std::vector<unsigned char>(UCharCast(blinding_key.begin()), UCharCast(blinding_key.end())));
     }
 
     unsigned char msg[SIDECHANNEL_MSG_SIZE] = {0};
@@ -541,7 +541,7 @@ int BlindTransaction(std::vector<uint256 >& input_value_blinding_factors, const 
                 CreateValueCommitment(conf_value, value_commit, value_blindptrs.back(), asset_gen, amount);
 
                 // nonce should just be blinding key
-                uint256 nonce = nPseudo ? uint256(std::vector<unsigned char>(token_blinding_privkey[nIn].begin(), token_blinding_privkey[nIn].end())) : uint256(std::vector<unsigned char>(issuance_blinding_privkey[nIn].begin(), issuance_blinding_privkey[nIn].end()));
+                uint256 nonce = nPseudo ? uint256(std::vector<unsigned char>(UCharCast(token_blinding_privkey[nIn].begin()), UCharCast(token_blinding_privkey[nIn].end()))) : uint256(std::vector<unsigned char>(UCharCast(issuance_blinding_privkey[nIn].begin()), UCharCast(issuance_blinding_privkey[nIn].end())));
 
                 // Generate rangeproof, no script committed for issuances
                 bool rangeresult = GenerateRangeproof((nPseudo ? txinwit.vchInflationKeysRangeproof : txinwit.vchIssuanceAmountRangeproof), value_blindptrs, nonce, amount, CScript(), value_commit, asset_gen, asset, asset_blindptrs);
