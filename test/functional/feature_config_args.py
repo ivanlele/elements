@@ -5,8 +5,8 @@
 """Test various command line arguments and configuration file parameters."""
 
 from pathlib import Path
+import platform
 import re
-import sys
 import tempfile
 import time
 
@@ -117,7 +117,7 @@ class ConfArgsTest(BitcoinTestFramework):
     def test_config_file_log(self):
         # Disable this test for windows currently because trying to override
         # the default datadir through the environment does not seem to work.
-        if sys.platform == "win32":
+        if platform.system() == "Windows":
             return
 
         self.log.info('Test that correct configuration path is changed when configuration file changes the datadir')
@@ -341,7 +341,7 @@ class ConfArgsTest(BitcoinTestFramework):
     def test_ignored_default_conf(self):
         # Disable this test for windows currently because trying to override
         # the default datadir through the environment does not seem to work.
-        if sys.platform == "win32":
+        if platform.system() == "Windows":
             return
 
         self.log.info('Test error is triggered when bitcoin.conf in the default data directory sets another datadir '
