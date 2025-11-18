@@ -3858,11 +3858,6 @@ std::set<ScriptPubKeyMan*> CWallet::GetScriptPubKeyMans(const CScript& script) c
     return spk_mans;
 }
 
-const CKeyingMaterial& CWallet::GetEncryptionKey() const
-{
-    return vMasterKey;
-}
-
 bool CWallet::HasEncryptionKeys() const
 {
     return !mapMasterKeys.empty();
@@ -3947,12 +3942,17 @@ void CWallet::SetupLegacyScriptPubKeyMan()
     AddScriptPubKeyMan(id, std::move(spk_manager));
 }
 
+bool CWallet::WithEncryptionKey(std::function<bool (const CKeyingMaterial&)> cb) const
+{
+    LOCK(cs_wallet);
+    return cb(vMasterKey);
+}
+
 //
 // ELEMENTS WALLET ADDITIONS
 //
 
-bool CWallet::SetOnlinePubKey(const CPubKey& online_key_in)
-{
+bool CWallet::SetOnlinePubKey(const CPubKey& online_key_in) {
     LOCK(cs_wallet);
     if (!WalletBatch(GetDatabase()).WriteOnlineKey(online_key_in)) {
         return false;
