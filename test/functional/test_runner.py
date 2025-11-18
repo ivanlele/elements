@@ -390,6 +390,7 @@ BASE_SCRIPTS = [
     #'feature_loadblock.py', # ELEMENTS: fixme figure out why this doesn't work
     #'p2p_dos_header_tree.py', # ELEMENTS: this test requires connecting to testnet3
     'feature_assumeutxo.py',
+    'wallet_assumeutxo.py --descriptors',
     'p2p_add_connections.py',
     'feature_bind_port_discover.py',
     'p2p_unrequested_blocks.py',
