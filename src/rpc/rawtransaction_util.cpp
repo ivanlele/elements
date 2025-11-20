@@ -266,7 +266,7 @@ void AddInputs(CMutableTransaction& rawTx, const UniValue& inputs_in, std::optio
     }
 }
 
-void AddOutputs(CMutableTransaction& rawTx, const UniValue& outputs_in, std::map<CTxOut, PSBTOutput>* outputs_aux)
+UniValue NormalizeOutputs(const UniValue& outputs_in)
 {
     if (outputs_in.isNull()) {
         throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid parameter, output argument must be non-null");
@@ -275,14 +275,34 @@ void AddOutputs(CMutableTransaction& rawTx, const UniValue& outputs_in, std::map
     const bool outputs_is_obj = outputs_in.isObject();
     UniValue outputs = outputs_is_obj ? outputs_in.get_obj() : outputs_in.get_array();
 
+    // ELEMENTS: we normalize to an array to support sending to the same address with multiple assets
+    if (outputs_is_obj) {
+        UniValue outputs_array = UniValue(UniValue::VARR);
+        const auto& keys = outputs.getKeys();
+        for (size_t i = 0; i < keys.size(); ++i) {
+            const auto& key = keys[i];
+            const auto& val = outputs[key];
+            UniValue output = UniValue(UniValue::VOBJ);
+            output.pushKV(key, val);
+            outputs_array.push_back(output);
+        }
+        outputs = std::move(outputs_array);
+    }
+    return outputs;
+}
+
+std::vector<std::pair<CTxDestination, CTxOut>> ParseOutputs(const UniValue& outputs, std::map<CTxOut, PSBTOutput>* outputs_aux)
+{
+    // Duplicate checking
+    std::set<std::pair<CTxDestination, CAsset>> destinations;
+    std::vector<std::pair<CTxDestination, CTxOut>> parsed_outputs;
+    bool has_data{false};
     // Keep track of the fee output so we can add it in the very end of the transaction.
     CTxOut fee_out;
 
-    // Duplicate checking
-    std::set<std::pair<CTxDestination,CAsset>> destinations;
-    bool has_data{false};
-
     std::vector<PSBTOutput> psbt_outs;
+    CHECK_NONFATAL(outputs.isArray());
+    bool add_fee_output = false;
     for (unsigned int i = 0; i < outputs.size(); ++i) {
         const UniValue& output = outputs[i].get_obj();
         // New PSBTOutput with version 2
@@ -305,6 +325,7 @@ void AddOutputs(CMutableTransaction& rawTx, const UniValue& outputs_in, std::map
 
                 out.nValue = 0;
                 out.scriptPubKey = CScript() << OP_RETURN << data;
+                destination = CNoDestination(out.scriptPubKey);
             } else if (name_ == "vdata") {
                 // ELEMENTS: support multi-push OP_RETURN
                 UniValue vdata = output[name_].get_array();
@@ -316,12 +337,14 @@ void AddOutputs(CMutableTransaction& rawTx, const UniValue& outputs_in, std::map
 
                 out.nValue = 0;
                 out.scriptPubKey = datascript;
+                destination = CNoDestination(out.scriptPubKey);
             } else if (name_ == "fee") {
                 // ELEMENTS: explicit fee outputs
                 CAmount nAmount = AmountFromValue(output[name_]);
                 out.nValue = nAmount;
                 out.scriptPubKey = CScript();
                 is_fee = true;
+                add_fee_output = true;
                 break;
             } else if (name_ == "burn") {
                 CScript datascript = CScript() << OP_RETURN;
@@ -342,7 +365,7 @@ void AddOutputs(CMutableTransaction& rawTx, const UniValue& outputs_in, std::map
                 dest = name_;
 
                 CScript scriptPubKey = GetScriptForDestination(destination);
-                CAmount nAmount = AmountFromValue(output[name_]);
+                CAmount nAmount = AmountFromValue(output[name_], out.nAsset.GetAsset() == ::policyAsset);
 
                 out.nValue = nAmount;
                 out.scriptPubKey = scriptPubKey;
@@ -365,22 +388,35 @@ void AddOutputs(CMutableTransaction& rawTx, const UniValue& outputs_in, std::map
         if (is_fee) {
             fee_out = out;
         } else {
-            rawTx.vout.push_back(out);
+            parsed_outputs.emplace_back(destination, out);
             psbt_outs.push_back(psbt_out);
         }
     }
 
     // Add fee output in the end.
-    if (!fee_out.nValue.IsNull() && fee_out.nValue.GetAmount() > 0) {
-        rawTx.vout.push_back(fee_out);
+    if (add_fee_output && !fee_out.nValue.IsNull() && fee_out.nValue.GetAmount() > 0) {
+        parsed_outputs.emplace_back(CNoDestination(), fee_out);
         // New PSBTOutput with version 2
         psbt_outs.emplace_back(2);
     }
 
     if (outputs_aux) {
-        for (unsigned int i = 0; i < rawTx.vout.size(); ++i) {
-            outputs_aux->insert(std::make_pair(rawTx.vout[i], psbt_outs[i]));
+        for (unsigned int i = 0; i < parsed_outputs.size(); ++i) {
+            const auto& [destination, out] = parsed_outputs[i];
+            outputs_aux->insert(std::make_pair(out, psbt_outs[i]));
         }
+    }
+    return parsed_outputs;
+}
+
+void AddOutputs(CMutableTransaction& rawTx, const UniValue& outputs_in, std::map<CTxOut, PSBTOutput>* outputs_aux)
+{
+    UniValue outputs(UniValue::VOBJ);
+    outputs = NormalizeOutputs(outputs_in);
+
+    std::vector<std::pair<CTxDestination, CTxOut>> parsed_outputs = ParseOutputs(outputs, outputs_aux);
+    for (const auto& [destination, out] : parsed_outputs) {
+        rawTx.vout.push_back(out);
     }
 }
 

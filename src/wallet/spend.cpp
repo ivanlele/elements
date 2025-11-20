@@ -1223,6 +1223,7 @@ static util::Result<CreatedTransactionResult> CreateTransactionInternal(
 
     std::set<CAsset> assets_seen;
     unsigned int outputs_to_subtract_fee_from = 0; // The number of outputs which we are subtracting the fee from
+    CAmount recipient_fees = 0; // ELEMENTS: keep track of fees already included in recipients
     for (const auto& recipient : vecSend)
     {
         // Pad change keys to cover total possible number of assets
@@ -1237,6 +1238,10 @@ static util::Result<CreatedTransactionResult> CreateTransactionInternal(
         }
 
         map_recipients_sum[recipient.asset] += recipient.nAmount;
+
+        if (g_con_elementsmode && GetScriptForDestination(recipient.dest) == CScript() && recipient.asset == ::policyAsset) {
+            recipient_fees += recipient.nAmount;
+        }
 
         if (recipient.fSubtractFeeFromAmount) {
             outputs_to_subtract_fee_from++;
@@ -1459,6 +1464,10 @@ static util::Result<CreatedTransactionResult> CreateTransactionInternal(
     const CAmount not_input_fees = coin_selection_params.m_effective_feerate.GetFee(coin_selection_params.m_subtract_fee_outputs ? 0 : coin_selection_params.tx_noinputs_size);
     CAmountMap map_selection_target = map_recipients_sum;
     map_selection_target[policyAsset] += not_input_fees;
+    // ELEMENTS: subtract fees already included in recipients from selection target
+    if (map_selection_target[policyAsset] > recipient_fees) {
+        map_selection_target[policyAsset] -= recipient_fees;
+    }
 
     // This can only happen if feerate is 0, and requested destinations are value of 0 (e.g. OP_RETURN)
     // and no pre-selected inputs. This will result in 0-input transaction, which is consensus-invalid anyways
@@ -1511,6 +1520,7 @@ static util::Result<CreatedTransactionResult> CreateTransactionInternal(
     // We will reduce the fee from this change output later, and remove the output if it is too small.
     // ELEMENTS: wrap this all in a loop, set nChangePosInOut specifically for policy asset
     CAmountMap map_change_and_fee = result.GetSelectedValue() - map_recipients_sum;
+    map_change_and_fee[::policyAsset] += recipient_fees; // ELEMENTS: add back fees already included in recipients
     // Zero out any non-policy assets which have zero change value
     for (auto it = map_change_and_fee.begin(); it != map_change_and_fee.end(); ) {
         if (it->first != policyAsset && it->second == 0) {
@@ -1605,7 +1615,15 @@ static util::Result<CreatedTransactionResult> CreateTransactionInternal(
     // Add fee output.
     if (g_con_elementsmode) {
         // only create fee output if non-zero fee
-        if (coin_selection_params.m_effective_feerate > CFeeRate()) {
+        // and we don't already have one
+        bool have_fee = false;
+        for (const auto& out : txNew.vout) {
+            if (out.IsFee()) {
+                have_fee = true;
+                break;
+            }
+        }
+        if (!have_fee && coin_selection_params.m_effective_feerate > CFeeRate()) {
             CTxOut fee(::policyAsset, 0, CScript());
             assert(fee.IsFee());
             txNew.vout.push_back(fee);
@@ -2139,29 +2157,11 @@ util::Result<CreatedTransactionResult> CreateTransaction(
     return res;
 }
 
-util::Result<CreatedTransactionResult> FundTransaction(CWallet& wallet, const CMutableTransaction& tx, std::optional<unsigned int> change_pos, bool lockUnspents, const std::set<int>& setSubtractFeeFromOutputs, CCoinControl coinControl)
+util::Result<CreatedTransactionResult> FundTransaction(CWallet& wallet, const CMutableTransaction& tx, const std::vector<CRecipient>& vecSend, std::optional<unsigned int> change_pos, bool lockUnspents, CCoinControl coinControl)
 {
-    std::vector<CRecipient> vecSend;
-
-    // Turn the txout set into a CRecipient vector.
-    for (size_t idx = 0; idx < tx.vout.size(); idx++) {
-        const CTxOut& txOut = tx.vout[idx];
-
-        // ELEMENTS:
-        if (!txOut.nValue.IsExplicit() || !txOut.nAsset.IsExplicit()) {
-            return util::Error{_("Pre-funded amounts must be non-blinded")};
-        }
-
-        // Fee outputs should not be added to avoid overpayment of fees
-        if (txOut.IsFee()) {
-            continue;
-        }
-
-        CTxDestination dest;
-        ExtractDestination(txOut.scriptPubKey, dest);
-        CRecipient recipient = {dest, txOut.nValue.GetAmount(), txOut.nAsset.GetAsset(), CPubKey(txOut.nNonce.vchCommitment), setSubtractFeeFromOutputs.count(idx) == 1};
-        vecSend.push_back(recipient);
-    }
+    // We want to make sure tx.vout is not used now that we are passing outputs as a vector of recipients.
+    // This sets us up to remove tx completely in a future PR in favor of passing the inputs directly.
+    assert(tx.vout.empty());
 
     // Set the user desired locktime
     coinControl.m_locktime = tx.nLockTime;
@@ -2230,22 +2230,6 @@ util::Result<CreatedTransactionResult> FundTransaction(CWallet& wallet, const CM
     if (!res) {
         return res;
     }
-    const auto& txr = *res;
-    CTransactionRef tx_new = txr.tx;
-
-    // Wipe outputs and output witness and re-add one by one
-    // tx.vout.clear();
-    // tx.witness.vtxoutwit.clear();
-    // for (unsigned int i = 0; i < tx_new->vout.size(); i++) {
-    //     const CTxOut& out = tx_new->vout[i];
-    //     tx.vout.push_back(out);
-    //     if (tx_new->witness.vtxoutwit.size() > i) {
-    //         // We want to re-add previously existing outwitnesses
-    //         // even though we don't create any new ones
-    //         const CTxOutWitness& outwit = tx_new->witness.vtxoutwit[i];
-    //         tx.witness.vtxoutwit.push_back(outwit);
-    //     }
-    // }
 
     if (lockUnspents) {
         for (const CTxIn& txin : res->tx->vin) {

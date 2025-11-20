@@ -29,43 +29,15 @@
 using wallet::CRecipient;
 
 namespace wallet {
-static void ParseRecipients(const UniValue& address_amounts, const UniValue& address_assets, const UniValue& subtract_fee_outputs, std::vector<CRecipient> &recipients)
+std::vector<CRecipient> CreateRecipients(const std::vector<std::pair<CTxDestination, CTxOut>>& outputs, const std::set<int>& subtract_fee_outputs)
 {
-    std::set<CTxDestination> destinations;
-    int i = 0;
-    for (const std::string& address: address_amounts.getKeys()) {
-        CAsset asset = Params().GetConsensus().pegged_asset;
-        if (!address_assets.isNull() && address_assets[address].isStr()) {
-            std::string strasset = address_assets[address].get_str();
-            asset = GetAssetFromString(strasset);
-        }
-        if (asset.IsNull() && g_con_elementsmode) {
-            throw JSONRPCError(RPC_WALLET_ERROR, strprintf("Unknown label and invalid asset hex: %s", asset.GetHex()));
-        }
-
-        CTxDestination dest = DecodeDestination(address);
-        if (!IsValidDestination(dest)) {
-            throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, std::string("Invalid Bitcoin address: ") + address);
-        }
-
-        if (destinations.count(dest)) {
-            throw JSONRPCError(RPC_INVALID_PARAMETER, std::string("Invalid parameter, duplicated address: ") + address);
-        }
-        destinations.insert(dest);
-
-        CAmount amount = AmountFromValue(address_amounts[i++], asset == Params().GetConsensus().pegged_asset);
-
-        bool subtract_fee = false;
-        for (unsigned int idx = 0; idx < subtract_fee_outputs.size(); idx++) {
-            const UniValue& addr = subtract_fee_outputs[idx];
-            if (addr.get_str() == address) {
-                subtract_fee = true;
-            }
-        }
-
-        CRecipient recipient = {dest, amount, asset, GetDestinationBlindingKey(dest), subtract_fee};
+    std::vector<CRecipient> recipients;
+    for (size_t i = 0; i < outputs.size(); ++i) {
+        const auto& [destination, out] = outputs.at(i);
+        CRecipient recipient{destination, out.nValue.GetAmount(), out.nAsset.GetAsset(), CPubKey(out.nNonce.vchCommitment), subtract_fee_outputs.contains(i)};
         recipients.push_back(recipient);
     }
+    return recipients;
 }
 
 static void InterpretFeeEstimationInstructions(const UniValue& conf_target, const UniValue& estimate_mode, const UniValue& fee_rate, UniValue& options)
@@ -88,6 +60,52 @@ static void InterpretFeeEstimationInstructions(const UniValue& conf_target, cons
     if (!options["conf_target"].isNull() && (options["estimate_mode"].isNull() || (options["estimate_mode"].get_str() == "unset"))) {
         throw JSONRPCError(RPC_INVALID_PARAMETER, "Specify estimate_mode");
     }
+}
+
+std::set<int> InterpretSubtractFeeFromOutputInstructions(const UniValue& sffo_instructions, const std::vector<std::string>& destinations)
+{
+    std::set<int> sffo_set;
+    if (sffo_instructions.isNull()) return sffo_set;
+    if (sffo_instructions.isBool()) {
+        if (sffo_instructions.get_bool()) sffo_set.insert(0);
+        return sffo_set;
+    }
+    for (const auto& sffo : sffo_instructions.getValues()) {
+        if (sffo.isStr()) {
+            for (size_t i = 0; i < destinations.size(); ++i) {
+                if (sffo.get_str() == destinations.at(i)) {
+                    sffo_set.insert(i);
+                    break;
+                }
+            }
+        }
+        if (sffo.isNum()) {
+            int pos = sffo.getInt<int>();
+            if (sffo_set.contains(pos))
+                throw JSONRPCError(RPC_INVALID_PARAMETER, strprintf("Invalid parameter, duplicated position: %d", pos));
+            if (pos < 0)
+                throw JSONRPCError(RPC_INVALID_PARAMETER, strprintf("Invalid parameter, negative position: %d", pos));
+            if (pos >= int(destinations.size()))
+                throw JSONRPCError(RPC_INVALID_PARAMETER, strprintf("Invalid parameter, position too large: %d", pos));
+            sffo_set.insert(pos);
+        }
+    }
+    return sffo_set;
+}
+
+// ELEMENTS: get list of addresses from outputs
+std::vector<std::string> GetAddresses(const UniValue& outputs)
+{
+    std::vector<std::string> addresses;
+    const auto& outs = outputs.get_array();
+    for (unsigned int i = 0; i < outs.size(); ++i) {
+        for (const auto& key : outs[i].get_obj().getKeys()) {
+            if (IsValidDestinationString(key)) {
+                addresses.push_back(key);
+            }
+        }
+    }
+    return addresses;
 }
 
 static UniValue FinishTransaction(const std::shared_ptr<CWallet> pwallet, const UniValue& options, const CMutableTransaction& rawTx)
@@ -293,11 +311,6 @@ RPCHelpMan sendtoaddress()
     if (!request.params[3].isNull() && !request.params[3].get_str().empty())
         mapValue["to"] = request.params[3].get_str();
 
-    bool fSubtractFeeFromAmount = false;
-    if (!request.params[4].isNull()) {
-        fSubtractFeeFromAmount = request.params[4].get_bool();
-    }
-
     CCoinControl coin_control;
     if (!request.params[5].isNull()) {
         coin_control.m_signal_bip125_rbf = request.params[5].get_bool();
@@ -325,19 +338,17 @@ RPCHelpMan sendtoaddress()
 
     EnsureWalletIsUnlocked(*pwallet);
 
-    UniValue address_amounts(UniValue::VOBJ);
-    UniValue address_assets(UniValue::VOBJ);
+    UniValue address_amounts(UniValue::VARR);
     const std::string address = request.params[0].get_str();
-    address_amounts.pushKV(address, request.params[1]);
-    address_assets.pushKV(address, asset.GetHex());
-    UniValue subtractFeeFromAmount(UniValue::VARR);
-    if (fSubtractFeeFromAmount) {
-        subtractFeeFromAmount.push_back(address);
-    }
-
-    std::vector<CRecipient> recipients;
-    ParseRecipients(address_amounts, address_assets, subtractFeeFromAmount, recipients);
-    bool verbose = request.params[12].isNull() ? false: request.params[12].get_bool();
+    UniValue obj(UniValue::VOBJ);
+    obj.pushKV("asset", asset.GetHex());
+    obj.pushKV(address, request.params[1]);
+    address_amounts.push_back(obj);
+    std::vector<CRecipient> recipients = CreateRecipients(
+            ParseOutputs(address_amounts),
+            InterpretSubtractFeeFromOutputInstructions(request.params[4], GetAddresses(address_amounts))
+    );
+    const bool verbose{request.params[12].isNull() ? false : request.params[12].get_bool()};
 
     return SendMoney(*pwallet, coin_control, recipients, mapValue, verbose, ignore_blind_fail);
 },
@@ -420,15 +431,35 @@ RPCHelpMan sendmany()
     if (!request.params[0].isNull() && !request.params[0].get_str().empty()) {
         throw JSONRPCError(RPC_INVALID_PARAMETER, "Dummy value must be set to \"\"");
     }
-    UniValue sendTo = request.params[1].get_obj();
+    UniValue sendTo = NormalizeOutputs(request.params[1].get_obj());
+
+    // ELEMENTS: if output_assets is supplied, redefine sendTo to include assets
+    if (!request.params[8].isNull()) {
+        if (!g_con_elementsmode) {
+            throw JSONRPCError(RPC_TYPE_ERROR, "Asset argument cannot be given for Bitcoin serialization.");
+        }
+        UniValue assets{request.params[8].get_obj()};
+        UniValue send_with_assets(UniValue::VARR);
+        for (const auto& out : sendTo.getValues()) {
+            UniValue new_out(UniValue::VOBJ);
+            const auto& addr_amount = out.get_obj();
+            for (const auto& key : addr_amount.getKeys()) {
+                std::string asset_str = assets.exists(key) ? assets[key].get_str() : Params().GetConsensus().pegged_asset.GetHex();
+                CAsset asset = GetAssetFromString(asset_str);
+                if (asset.IsNull()) {
+                    throw JSONRPCError(RPC_WALLET_ERROR, strprintf("Unknown label and invalid asset hex: %s", asset_str));
+                }
+                new_out.pushKV("asset", asset.GetHex());
+                new_out.pushKV(key, addr_amount[key]);
+            }
+            send_with_assets.push_back(new_out);
+        }
+        sendTo = send_with_assets;
+    }
 
     mapValue_t mapValue;
     if (!request.params[3].isNull() && !request.params[3].get_str().empty())
         mapValue["comment"] = request.params[3].get_str();
-
-    UniValue subtractFeeFromAmount(UniValue::VARR);
-    if (!request.params[4].isNull())
-        subtractFeeFromAmount = request.params[4].get_array();
 
     CCoinControl coin_control;
     if (!request.params[5].isNull()) {
@@ -437,22 +468,16 @@ RPCHelpMan sendmany()
 
     SetFeeEstimateMode(*pwallet, coin_control, /*conf_target=*/request.params[6], /*estimate_mode=*/request.params[7], /*fee_rate=*/request.params[10], /*override_min_fee=*/false);
 
-    UniValue assets;
-    if (!request.params[8].isNull()) {
-        if (!g_con_elementsmode) {
-            throw JSONRPCError(RPC_TYPE_ERROR, "Asset argument cannot be given for Bitcoin serialization.");
-        }
-        assets = request.params[8].get_obj();
-    }
-
     bool ignore_blind_fail = true;
     if (!request.params[9].isNull()) {
         ignore_blind_fail = request.params[9].get_bool();
     }
 
-    std::vector<CRecipient> recipients;
-    ParseRecipients(sendTo, assets, subtractFeeFromAmount, recipients);
-    bool verbose = request.params[11].isNull() ? false : request.params[11].get_bool();
+    std::vector<CRecipient> recipients = CreateRecipients(
+            ParseOutputs(sendTo),
+            InterpretSubtractFeeFromOutputInstructions(request.params[4], GetAddresses(sendTo))
+    );
+    const bool verbose{request.params[11].isNull() ? false : request.params[11].get_bool()};
 
     return SendMoney(*pwallet, coin_control, recipients, std::move(mapValue), verbose, ignore_blind_fail);
 },
@@ -541,17 +566,17 @@ static std::vector<RPCArg> FundTxDoc(bool solving_data = true)
     return args;
 }
 
-CreatedTransactionResult FundTransaction(CWallet& wallet, const CMutableTransaction& tx, const UniValue& options, CCoinControl& coinControl, bool override_min_fee)
+CreatedTransactionResult FundTransaction(CWallet& wallet, const CMutableTransaction& tx, const std::vector<CRecipient>& recipients, const UniValue& options, CCoinControl& coinControl, bool override_min_fee)
 {
+    // We want to make sure tx.vout is not used now that we are passing outputs as a vector of recipients.
+    // This sets us up to remove tx completely in a future PR in favor of passing the inputs directly.
+    CHECK_NONFATAL(tx.vout.empty());
     // Make sure the results are valid at least up to the most recent block
     // the user could have gotten from another RPC command prior to now
     wallet.BlockUntilSyncedToCurrentChain();
 
     std::optional<unsigned int> change_position;
     bool lockUnspents = false;
-    UniValue subtractFeeFromOutputs;
-    std::set<int> setSubtractFeeFromOutputs;
-
     if (!options.isNull()) {
       if (options.type() == UniValue::VBOOL) {
         // backward compatibility bool only fallback
@@ -632,7 +657,7 @@ CreatedTransactionResult FundTransaction(CWallet& wallet, const CMutableTransact
 
         if (options.exists("changePosition") || options.exists("change_position")) {
             int pos = (options.exists("change_position") ? options["change_position"] : options["changePosition"]).getInt<int>();
-            if (pos < 0 || (unsigned int)pos > tx.vout.size()) {
+            if (pos < 0 || (unsigned int)pos > recipients.size()) {
                 throw JSONRPCError(RPC_INVALID_PARAMETER, "changePosition out of bounds");
             }
             change_position = (unsigned int)pos;
@@ -673,9 +698,6 @@ CreatedTransactionResult FundTransaction(CWallet& wallet, const CMutableTransact
             coinControl.m_feerate = CFeeRate(AmountFromValue(options["feeRate"]));
             coinControl.fOverrideFeeRate = true;
         }
-
-        if (options.exists("subtractFeeFromOutputs") || options.exists("subtract_fee_from_outputs") )
-            subtractFeeFromOutputs = (options.exists("subtract_fee_from_outputs") ? options["subtract_fee_from_outputs"] : options["subtractFeeFromOutputs"]).get_array();
 
         if (options.exists("replaceable")) {
             coinControl.m_signal_bip125_rbf = options["replaceable"].get_bool();
@@ -785,21 +807,10 @@ CreatedTransactionResult FundTransaction(CWallet& wallet, const CMutableTransact
         }
     }
 
-    if (tx.vout.size() == 0)
+    if (recipients.empty())
         throw JSONRPCError(RPC_INVALID_PARAMETER, "TX must have at least one output");
 
-    for (unsigned int idx = 0; idx < subtractFeeFromOutputs.size(); idx++) {
-        int pos = subtractFeeFromOutputs[idx].getInt<int>();
-        if (setSubtractFeeFromOutputs.count(pos))
-            throw JSONRPCError(RPC_INVALID_PARAMETER, strprintf("Invalid parameter, duplicated position: %d", pos));
-        if (pos < 0)
-            throw JSONRPCError(RPC_INVALID_PARAMETER, strprintf("Invalid parameter, negative position: %d", pos));
-        if (pos >= int(tx.vout.size()))
-            throw JSONRPCError(RPC_INVALID_PARAMETER, strprintf("Invalid parameter, position too large: %d", pos));
-        setSubtractFeeFromOutputs.insert(pos);
-    }
-
-    auto txr = FundTransaction(wallet, tx, change_position, lockUnspents, setSubtractFeeFromOutputs, coinControl);
+    auto txr = FundTransaction(wallet, tx, recipients, change_position, lockUnspents, coinControl);
     if (!txr) {
         throw JSONRPCError(RPC_WALLET_ERROR, ErrorString(txr).original);
     }
@@ -925,11 +936,33 @@ RPCHelpMan fundrawtransaction()
     if (!DecodeHexTx(tx, request.params[0].get_str(), try_no_witness, try_witness)) {
         throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "TX decode failed");
     }
-
+    UniValue options = request.params[1];
+    std::vector<std::pair<CTxDestination, CTxOut>> destinations;
+    for (const auto& tx_out : tx.vout) {
+        // ELEMENTS:
+        if (!tx_out.nValue.IsExplicit() || !tx_out.nAsset.IsExplicit()) {
+            throw JSONRPCError(RPC_INVALID_PARAMETER, "All outputs must be explicit");
+        }
+        // Fee outputs should not be added to avoid overpayment of fees
+        if (tx_out.IsFee()) {
+            continue;
+        }
+        CTxDestination dest;
+        ExtractDestination(tx_out.scriptPubKey, dest);
+        destinations.emplace_back(dest, tx_out);
+    }
+    std::vector<std::string> dummy(destinations.size(), "dummy");
+    std::vector<CRecipient> recipients = CreateRecipients(
+            destinations,
+            InterpretSubtractFeeFromOutputInstructions(options["subtractFeeFromOutputs"], dummy)
+    );
     CCoinControl coin_control;
     // Automatically select (additional) coins. Can be overridden by options.add_inputs.
     coin_control.m_allow_other_inputs = true;
-    auto txr = FundTransaction(*pwallet, tx, request.params[1], coin_control, /*override_min_fee=*/true);
+    // Clear tx.vout since it is not meant to be used now that we are passing outputs directly.
+    // This sets us up for a future PR to completely remove tx from the function signature in favor of passing inputs directly
+    tx.vout.clear();
+    auto txr = FundTransaction(*pwallet, tx, recipients, options, coin_control, /*override_min_fee=*/true);
 
     UniValue result(UniValue::VOBJ);
     result.pushKV("hex", EncodeHexTx(*txr.tx));
@@ -1360,13 +1393,22 @@ RPCHelpMan send()
 
 
             bool rbf{options.exists("replaceable") ? options["replaceable"].get_bool() : pwallet->m_signal_rbf};
+            UniValue outputs(UniValue::VOBJ);
+            outputs = NormalizeOutputs(request.params[0]);
+            std::vector<CRecipient> recipients = CreateRecipients(
+                    ParseOutputs(outputs),
+                    InterpretSubtractFeeFromOutputInstructions(options["subtract_fee_from_outputs"], GetAddresses(outputs))
+            );
             CMutableTransaction rawTx = ConstructTransaction(options["inputs"], request.params[0], options["locktime"], rbf, pwallet->chain().getTip(), nullptr /* output_pubkey_out */, true /* allow_peg_in */);
             CCoinControl coin_control;
             // Automatically select coins, unless at least one is manually selected. Can
             // be overridden by options.add_inputs.
             coin_control.m_allow_other_inputs = rawTx.vin.size() == 0;
             SetOptionsInputWeights(options["inputs"], options);
-            auto txr = FundTransaction(*pwallet, rawTx, options, coin_control, /*override_min_fee=*/false);
+            // Clear tx.vout since it is not meant to be used now that we are passing outputs directly.
+            // This sets us up for a future PR to completely remove tx from the function signature in favor of passing inputs directly
+            rawTx.vout.clear();
+            auto txr = FundTransaction(*pwallet, rawTx, recipients, options, coin_control, /*override_min_fee=*/false);
 
             return FinishTransaction(pwallet, options, CMutableTransaction(*txr.tx));
         }
@@ -1859,6 +1901,13 @@ RPCHelpMan walletcreatefundedpsbt()
     std::map<CTxOut, PSBTOutput> psbt_outs;
     CMutableTransaction rawTx = ConstructTransaction(request.params[0], request.params[1], request.params[2], rbf, wallet.chain().getTip(), &psbt_outs, true /* allow_peg_in */, true /* allow_issuance */);
 
+    UniValue outputs(UniValue::VOBJ);
+    outputs = NormalizeOutputs(request.params[1]);
+    std::vector<CRecipient> recipients = CreateRecipients(
+            ParseOutputs(outputs),
+            InterpretSubtractFeeFromOutputInstructions(options["subtractFeeFromOutputs"], GetAddresses(outputs))
+    );
+
     // Make a blank psbt
     uint32_t psbt_version = 2;
     if (!request.params[5].isNull()) {
@@ -1911,7 +1960,10 @@ RPCHelpMan walletcreatefundedpsbt()
         }
     }
     SetOptionsInputWeights(request.params[0], options);
-    auto txr = FundTransaction(wallet, rawTx, options, coin_control, /*override_min_fee=*/true);
+    // Clear tx.vout since it is not meant to be used now that we are passing outputs directly.
+    // This sets us up for a future PR to completely remove tx from the function signature in favor of passing inputs directly
+    rawTx.vout.clear();
+    auto txr = FundTransaction(wallet, rawTx, recipients, options, coin_control, /*override_min_fee=*/true);
     // Find an input that is ours
     unsigned int blinder_index = 0;
     {

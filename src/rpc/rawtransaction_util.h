@@ -5,6 +5,8 @@
 #ifndef BITCOIN_RPC_RAWTRANSACTION_UTIL_H
 #define BITCOIN_RPC_RAWTRANSACTION_UTIL_H
 
+#include <addresstype.h>
+#include <consensus/amount.h>
 #include <map>
 #include <optional>
 #include <string>
@@ -50,7 +52,13 @@ void ParsePrevouts(const UniValue& prevTxsUnival, FillableSigningProvider* keyst
 /** Normalize univalue-represented inputs and add them to the transaction */
 void AddInputs(CMutableTransaction& rawTx, const UniValue& inputs_in, bool rbf, const CBlockIndex* active_chain_tip, bool allow_peg_in = true, bool allow_issuance = true);
 
-/** Normalize univalue-represented outputs and add them to the transaction */
+/** Normalize univalue-represented outputs */
+UniValue NormalizeOutputs(const UniValue& outputs_in);
+
+/** Parse normalized outputs into destination, amount tuples */
+std::vector<std::pair<CTxDestination, CTxOut>> ParseOutputs(const UniValue& outputs, std::map<CTxOut, PSBTOutput>* outputs_aux = nullptr);
+
+/** Normalize, parse, and add outputs to the transaction */
 void AddOutputs(CMutableTransaction& rawTx, const UniValue& outputs_in, std::map<CTxOut, PSBTOutput>* outputs_aux = nullptr);
 
 /** Create a transaction from univalue parameters. If (and only if)
