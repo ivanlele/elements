@@ -1886,13 +1886,15 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
     // ********************************************************* Step 12: start node
 
     //// debug print
+    int64_t best_block_time{};
     {
         LOCK(cs_main);
         LogPrintf("block tree size = %u\n", chainman.BlockIndex().size());
         chain_active_height = chainman.ActiveChain().Height();
+        best_block_time = chainman.ActiveChain().Tip() ? chainman.ActiveChain().Tip()->GetBlockTime() : chainman.GetParams().GenesisBlock().GetBlockTime();
         if (tip_info) {
             tip_info->block_height = chain_active_height;
-            tip_info->block_time = chainman.ActiveChain().Tip() ? chainman.ActiveChain().Tip()->GetBlockTime() : chainman.GetParams().GenesisBlock().GetBlockTime();
+            tip_info->block_time = best_block_time;
             tip_info->verification_progress = GuessVerificationProgress(chainman.ActiveChain().Tip(), chainman.GetParams().GetConsensus().nPowTargetSpacing);
 
         }
@@ -1902,7 +1904,7 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
         }
     }
     LogPrintf("nBestHeight = %d\n", chain_active_height);
-    if (node.peerman) node.peerman->SetBestHeight(chain_active_height);
+    if (node.peerman) node.peerman->SetBestBlock(chain_active_height, std::chrono::seconds{best_block_time});
 
     // Map ports with UPnP or NAT-PMP.
     StartMapPort(args.GetBoolArg("-upnp", DEFAULT_UPNP), args.GetBoolArg("-natpmp", DEFAULT_NATPMP));
