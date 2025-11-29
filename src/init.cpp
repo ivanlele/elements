@@ -1589,7 +1589,6 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
     ChainstateManager::Options chainman_opts{
         .chainparams = chainparams,
         .datadir = args.GetDataDirNet(),
-        .adjusted_time_callback = GetAdjustedTime,
         .minimum_chain_work = UintToArith256(chainparams.GetConsensus().nMinimumChainWork),
         .assumed_valid_block = chainparams.GetConsensus().defaultAssumeValid,
         .notifications = *node.notifications,

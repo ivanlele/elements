@@ -207,7 +207,6 @@ RPCHelpMan getpeginaddress()
     ChainstateManager::Options chain_opts{
         .chainparams = chainparams,
         .datadir = gArgs.GetDataDirNet(),
-        .adjusted_time_callback = GetAdjustedTime,
         .minimum_chain_work = UintToArith256(consensus.nMinimumChainWork),
         .assumed_valid_block = consensus.defaultAssumeValid,
         .notifications = notifications,
