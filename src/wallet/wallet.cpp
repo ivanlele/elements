@@ -5069,6 +5069,9 @@ util::Result<MigrationResult> MigrateLegacyToDescriptor(const std::string& walle
         success = local_wallet->IsWalletFlagSet(WALLET_FLAG_BLANK_WALLET);
         if (!success) {
             success = DoMigration(*local_wallet, context, error, res);
+        } else {
+            // Make sure that descriptors flag is actually set
+            local_wallet->SetWalletFlag(WALLET_FLAG_DESCRIPTORS);
         }
     }
 
