@@ -351,6 +351,7 @@ std::vector<std::pair<CTxDestination, CTxOut>> ParseOutputs(const UniValue& outp
                 CAmount nAmount = AmountFromValue(output[name_]);
                 out.nValue = nAmount;
                 out.scriptPubKey = datascript;
+                destination = CNoDestination(out.scriptPubKey);
             } else if (name_ == "asset") {
                 // ELEMENTS: Assets are specified
                 out.nAsset = CAsset(ParseHashO(output, name_));

@@ -7,7 +7,7 @@ a serialized version of the UTXO set at a certain height, which corresponds
 to a hash that has been compiled into bitcoind.
 
 The assumeutxo value generated and used here is committed to in
-`CRegTestParams::m_assumeutxo_data` in `src/chainparams.cpp`.
+`CRegTestParams::m_assumeutxo_data` in `src/kernel/chainparams.cpp`.
 
 ## Possible test improvements
 
@@ -41,8 +41,10 @@ from test_framework.util import (
     assert_equal,
     assert_raises_rpc_error,
 )
-from test_framework.wallet import getnewdestination
-
+from test_framework.wallet import (
+    getnewdestination,
+    MiniWallet,
+)
 
 START_HEIGHT = 199
 SNAPSHOT_BASE_HEIGHT = 299
@@ -99,10 +101,10 @@ class AssumeutxoTest(BitcoinTestFramework):
 
         self.log.info("  - snapshot file with alternated UTXO data")
         cases = [
-            [b"\xff" * 32, 0, "23b0cbf584abbccc376b4f3af3e7012fcb2abb8d7a8d31bd0b41ff52597acbd5"], # wrong outpoint hash
-            [(1).to_bytes(4, "little"), 32, "0f778bbe6a1bb23cf4dcb71c4f03597cde1a9226dcfd46b92d76c83c3b68f28f"], # wrong outpoint index
-            [b"\x81", 36, "024c9a955e32485c59edc99f1a6b0ec76f3d0211c3fcfec8e48420d952c69eaf"], # wrong coin code VARINT((coinbase ? 1 : 0) | (height << 1))
-            [b"\x83", 36, "d5dedd16822fd5498d8c5bf62a1c1d29a180d7810ce59601e96f723bc34270ad"], # another wrong coin code
+            [b"\xff" * 32, 0, "fe24331eea3495e16b64f40f2b3c98141dcf197d7141d09ac73564b08df966a8"],  # wrong outpoint hash
+            [(1).to_bytes(4, "little"), 32, "462a4ce4edeaa411e3b187e0aae625b81d35b8a113dc3ee2f2534e583a4dcfe4"],  # wrong outpoint index
+            [b"\x81", 36, "1c0631e0459385cf7568e955429697b1b8bf981f44268dc9b4a1758a5dfd116e"],  # wrong coin code VARINT((coinbase ? 1 : 0) | (height << 1))
+            [b"\x80", 36, "ea23396cbe1f91cc5c75cade465df52d37f280bb5aad73a695a36ebfbb32ec01"],  # another wrong coin code
         ]
 
         for content, offset, wrong_hash in cases:
@@ -110,7 +112,7 @@ class AssumeutxoTest(BitcoinTestFramework):
                 f.write(valid_snapshot_contents[:(32 + 8 + offset)])
                 f.write(content)
                 f.write(valid_snapshot_contents[(32 + 8 + offset + len(content)):])
-            expected_error(log_msg=f"[snapshot] bad snapshot content hash: expected a27626bcf55269c98b4210ba1f2f87c80dcc817d03bb5fd147c065e0ea1be772, got {wrong_hash}")
+            expected_error(log_msg=f"[snapshot] bad snapshot content hash: expected 4f046c8d36732314b2ccd00be35232e7a211eb87b0fd8858f898f511bc7fae64, got {wrong_hash}")
 
     def test_invalid_chainstate_scenarios(self):
         self.log.info("Test different scenarios of invalid snapshot chainstate in datadir")
@@ -146,6 +148,8 @@ class AssumeutxoTest(BitcoinTestFramework):
         n1 = self.nodes[1]
         n2 = self.nodes[2]
 
+        self.mini_wallet = MiniWallet(n0)
+
         # Mock time for a deterministic chain
         for n in self.nodes:
             n.setmocktime(n.getblockheader(n.getbestblockhash())['time'])
@@ -158,6 +162,8 @@ class AssumeutxoTest(BitcoinTestFramework):
         # isn't waiting forever to see the header of the snapshot's base block
         # while disconnected from n0.
         for i in range(100):
+            if i % 3 == 0:
+                self.mini_wallet.send_self_transfer(from_node=n0)
             self.generate(n0, nblocks=1, sync_fun=self.no_op)
             newblock = n0.getblock(n0.getbestblockhash(), 0)
 
@@ -176,12 +182,11 @@ class AssumeutxoTest(BitcoinTestFramework):
 
         self.log.info(f"Creating a UTXO snapshot at height {SNAPSHOT_BASE_HEIGHT}")
         dump_output = n0.dumptxoutset('utxos.dat')
-        print(dump_output)
 
         assert_equal(
             dump_output['txoutset_hash'],
-            'a27626bcf55269c98b4210ba1f2f87c80dcc817d03bb5fd147c065e0ea1be772')
-        assert_equal(dump_output['nchaintx'], 300)
+            "4f046c8d36732314b2ccd00be35232e7a211eb87b0fd8858f898f511bc7fae64")
+        assert_equal(dump_output["nchaintx"], 334)
         assert_equal(n0.getblockchaininfo()["blocks"], SNAPSHOT_BASE_HEIGHT)
 
         # Mine more blocks on top of the snapshot that n1 hasn't yet seen. This
@@ -218,7 +223,7 @@ class AssumeutxoTest(BitcoinTestFramework):
         prev_tx = n0.getblock(spend_coin_blockhash, 3)['tx'][0]
         prevout = {"txid": prev_tx['txid'], "vout": 0, "scriptPubKey": prev_tx['vout'][0]['scriptPubKey']['hex']}
         privkey = n0.get_deterministic_priv_key().key
-        raw_tx = n1.createrawtransaction([prevout], [{getnewdestination()[2]: 24.99}, {"fee": Decimal("0.01")}])
+        raw_tx = n1.createrawtransaction([prevout], [{getnewdestination()[2]: Decimal("24.99055500")}, {"fee": Decimal("0.01")}]) # ELEMENTS
         signed_tx = n1.signrawtransactionwithkey(raw_tx, [privkey], [prevout])['hex']
         signed_txid = tx_from_hex(signed_tx).rehash()
 
