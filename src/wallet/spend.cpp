@@ -786,13 +786,22 @@ util::Result<SelectionResult> ChooseSelectionResult(interfaces::Chain& chain, co
 
         // SFFO frequently causes issues in the context of changeless input sets: skip BnB when SFFO is active
         if (!coin_selection_params.m_subtract_fee_outputs) {
-            if (auto bnb_result{SelectCoinsBnB(groups.positive_group, nTargetValue, coin_selection_params.m_cost_of_change, max_inputs_weight)}) {
+            if (auto bnb_result{SelectCoinsBnB(asset_groups, nTargetValue, coin_selection_params.m_cost_of_change, max_inputs_weight)}) {
                 results.push_back(*bnb_result);
             } else append_error(bnb_result);
         }
 
         // As Knapsack and SRD can create change, also deduce change weight.
         max_inputs_weight -= (coin_selection_params.change_output_size * WITNESS_SCALE_FACTOR);
+
+        if (coin_selection_params.m_effective_feerate > CFeeRate{3 * coin_selection_params.m_long_term_feerate}) { // Minimize input set for feerates of at least 3×LTFRE (default: 30 ṩ/vB+)
+            if (auto cg_result{CoinGrinder(asset_groups, mapTargetValue, coin_selection_params.m_min_change_target, max_inputs_weight)}) {
+                cg_result->ComputeAndSetWaste(coin_selection_params.min_viable_change, coin_selection_params.m_cost_of_change, coin_selection_params.m_change_fee);
+                results.push_back(*cg_result);
+            } else {
+                append_error(cg_result);
+            }
+        }
 
         // Include change for SRD as we want to avoid making really small change if the selection just
         // barely meets the target. Just use the lower bound change target instead of the randomly
