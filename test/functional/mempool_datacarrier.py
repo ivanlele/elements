@@ -11,6 +11,7 @@ from test_framework.script import (
     CScript,
     OP_RETURN,
 )
+from decimal import Decimal
 from test_framework.test_framework import BitcoinTestFramework
 from test_framework.test_node import TestNode
 from test_framework.util import assert_raises_rpc_error
@@ -30,12 +31,9 @@ class DataCarrierTest(BitcoinTestFramework):
         ]
 
     def test_null_data_transaction(self, node: TestNode, data, success: bool) -> None:
-        tx = self.wallet.create_self_transfer(fee_rate=0)["tx"]
+        tx = self.wallet.create_self_transfer(fee_rate=Decimal(0.001))["tx"]
         data = [] if data is None else [data]
         tx.vout.append(CTxOut(nValue=0, scriptPubKey=CScript([OP_RETURN] + data)))
-        # ELEMENTS: set the fee amount to the value subtracted from the first output
-        tx.vout[0].nValue.setToAmount(tx.vout[0].nValue.getAmount() - tx.get_vsize())  # simply pay 1sat/vbyte fee
-        tx.vout[1].nValue.setToAmount(tx.get_vsize())
 
         tx_hex = tx.serialize().hex()
 
