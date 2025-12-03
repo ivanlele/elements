@@ -254,6 +254,7 @@ BITCOIN_CORE_H = \
   outputtype.h \
   pegins.h \
   policy/discount.h \
+  policy/v3_policy.h \
   policy/feerate.h \
   policy/fees.h \
   policy/fees_args.h \
@@ -461,6 +462,7 @@ libbitcoin_node_a_SOURCES = \
   node/validation_cache_args.cpp \
   noui.cpp \
   pegins.cpp \
+  policy/v3_policy.cpp \
   policy/fees.cpp \
   policy/fees_args.cpp \
   policy/packages.cpp \
@@ -745,6 +747,7 @@ libbitcoin_common_a_SOURCES = \
   netbase.cpp \
   net_permissions.cpp \
   outputtype.cpp \
+  policy/v3_policy.cpp \
   policy/feerate.cpp \
   policy/policy.cpp \
   protocol.cpp \
@@ -1043,6 +1046,7 @@ libbitcoinkernel_la_SOURCES = \
   node/blockstorage.cpp \
   node/chainstate.cpp \
   node/utxo_snapshot.cpp \
+  policy/v3_policy.cpp \
   policy/feerate.cpp \
   policy/packages.cpp \
   policy/policy.cpp \

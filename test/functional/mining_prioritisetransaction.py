@@ -272,14 +272,8 @@ class PrioritiseTransactionTest(BitcoinTestFramework):
         # Create a free transaction.  Should be rejected.
         tx_res = self.wallet.create_self_transfer(fee_rate=0)
 
-        # ELEMENTS: create_self_trasfer adds a fee output at the end of the transaction
-        # ELEMENTS: cannot have a 0 fee output (unlike bitcoin), so we need to set it
-        #           manually to the lowest possible value (1 satoshi)
+        # ELEMENTS: for zero fee fee output is not added
         tx = tx_res['tx']
-        assert tx.vout[1].is_fee()
-        tx.vout[0].nValue.setToAmount(tx.vout[0].nValue.getAmount() - 1)
-        tx.vout[1].nValue.setToAmount(1)
-
         tx_hex = tx.serialize().hex()
         tx_id = tx.rehash()
 
@@ -296,7 +290,7 @@ class PrioritiseTransactionTest(BitcoinTestFramework):
         self.log.info("Assert that prioritised free transaction is accepted to mempool")
         assert_equal(self.nodes[0].sendrawtransaction(tx_hex), tx_id)
         assert tx_id in self.nodes[0].getrawmempool()
-        assert_equal(self.nodes[0].getprioritisedtransactions()[tx_id], { "fee_delta" : self.relayfee*COIN, "in_mempool" : True, "modified_fee": int(self.relayfee*COIN + COIN * tx_res["fee"] + 1)}) # ELEMENTS
+        assert_equal(self.nodes[0].getprioritisedtransactions()[tx_id], { "fee_delta" : self.relayfee*COIN, "in_mempool" : True, "modified_fee": int(self.relayfee*COIN + COIN * tx_res["fee"])}) # ELEMENTS
 
         # Test that calling prioritisetransaction is sufficient to trigger
         # getblocktemplate to (eventually) return a new block.
