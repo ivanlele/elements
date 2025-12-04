@@ -968,6 +968,7 @@ void RPCConsole::message(int category, const QString &message, bool html)
 
 void RPCConsole::updateNetworkState()
 {
+    if (!clientModel) return;
     QString connections = QString::number(clientModel->getNumConnections()) + " (";
     connections += tr("In:") + " " + QString::number(clientModel->getNumConnections(CONNECTIONS_IN)) + " / ";
     connections += tr("Out:") + " " + QString::number(clientModel->getNumConnections(CONNECTIONS_OUT)) + ")";
