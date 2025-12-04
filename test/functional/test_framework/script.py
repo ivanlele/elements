@@ -418,7 +418,6 @@ OPCODE_NAMES.update({
     OP_NOP9: 'OP_NOP9',
     OP_NOP10: 'OP_NOP10',
     OP_CHECKSIGADD: 'OP_CHECKSIGADD',
-    OP_INVALIDOPCODE: 'OP_INVALIDOPCODE',
     OP_SHA256INITIALIZE : 'OP_SHA256INITIALIZE',
     OP_SHA256UPDATE : 'OP_SHA256UPDATE',
     OP_SHA256FINALIZE : 'OP_SHA256FINALIZE',
@@ -904,7 +903,7 @@ def SegwitV0SignatureMsg(script, txTo, inIdx, hashtype, amount, enable_sighash_r
     ss += ser_uint256(hashOutputs)
     if enable_sighash_rangeproof and hashtype & SIGHASH_RANGEPROOF:
         ss += ser_uint256(hashRangeproofs)
-    ss += struct.pack("<i", txTo.nLockTime)
+    ss += txTo.nLockTime.to_bytes(4, "little")
     ss += struct.pack("<I", hashtype)
     return ss
 
