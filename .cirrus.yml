@@ -60,6 +60,7 @@ base_template: &BASE_TEMPLATE
   merge_base_script:
     # Unconditionally install git (used in fingerprint_script).
     - git --version || bash -c "$PACKAGE_MANAGER_INSTALL git"
+    - rsync --version || bash -c "$PACKAGE_MANAGER_INSTALL rsync" # ELEMENTS
     - if [ "$CIRRUS_PR" = "" ]; then exit 0; fi
     - git fetch --depth=1 $CIRRUS_REPO_CLONE_URL "pull/${CIRRUS_PR}/merge"
     - git checkout FETCH_HEAD  # Use merged changes to detect silent merge conflicts
