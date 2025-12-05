@@ -5,7 +5,7 @@
 """Test that descriptor wallets rescan mempool transactions properly when importing."""
 
 from test_framework.address import (
-    address_to_scriptpubkey,
+    # address_to_scriptpubkey,
     ADDRESS_BCRT1_UNSPENDABLE,
 )
 from test_framework.messages import COIN

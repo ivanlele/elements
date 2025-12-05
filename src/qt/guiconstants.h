@@ -2,6 +2,10 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#if defined(HAVE_CONFIG_H)
+#include <config/bitcoin-config.h>
+#endif
+
 #ifndef BITCOIN_QT_GUICONSTANTS_H
 #define BITCOIN_QT_GUICONSTANTS_H
 

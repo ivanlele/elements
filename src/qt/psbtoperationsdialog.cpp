@@ -181,7 +181,7 @@ QString PSBTOperationsDialog::renderTransaction(const PartiallySignedTransaction
         CTxDestination address;
         ExtractDestination(*out.script, address);
         totalAmount += *out.amount;
-        tx_description.append(bullet_point).append(tr(" * Sends %1 to %2")
+        tx_description.append(bullet_point).append(tr("Sends %1 to %2")
             .arg(GUIUtil::formatAssetAmount(CAsset(out.m_asset), *out.amount, std::make_optional(unit), BitcoinUnits::SeparatorStyle::ALWAYS))
             .arg(QString::fromStdString(EncodeDestination(address))));
         // Check if the address is one of ours

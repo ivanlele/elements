@@ -3,6 +3,10 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#if defined(HAVE_CONFIG_H)
+#include <config/bitcoin-config.h>
+#endif
+
 #include <rpc/request.h>
 
 #include <util/fs.h>
@@ -155,7 +159,7 @@ bool GetMainchainAuthCookie(std::string *cookie_out)
     std::ifstream file;
     std::string cookie;
 
-    std::filesystem::path filepath = GetMainchainAuthCookieFile();
+    fs::path filepath = GetMainchainAuthCookieFile();
     file.open(filepath);
     if (!file.is_open())
         return false;
