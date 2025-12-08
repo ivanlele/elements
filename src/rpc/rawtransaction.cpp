@@ -725,6 +725,9 @@ static RPCHelpMan combinerawtransaction()
                 },
         [&](const RPCHelpMan& self, const JSONRPCRequest& request) -> UniValue
 {
+    if (request.params.size() < 1 || !request.params[0].isArray()) {
+        throw JSONRPCError(RPC_INVALID_PARAMETER, "Expected an array of hex-encoded transactions");
+    }
 
     UniValue txs = request.params[0].get_array();
     std::vector<CMutableTransaction> txVariants(txs.size());

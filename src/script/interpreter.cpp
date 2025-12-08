@@ -2641,7 +2641,7 @@ void PrecomputedTransactionData::Init(const T& txTo, std::vector<CTxOut>&& spent
         simplicityRawTx.numInputs = simplicityRawInput.size();
         simplicityRawTx.output = simplicityRawOutput.data();
         simplicityRawTx.numOutputs = simplicityRawOutput.size();
-        simplicityRawTx.version = txTo.nVersion;
+        simplicityRawTx.version = (uint32_t)txTo.nVersion;
         simplicityRawTx.lockTime = txTo.nLockTime;
 
         m_simplicity_tx_data = SimplicityTransactionUniquePtr(simplicity_elements_mallocTransaction(&simplicityRawTx));

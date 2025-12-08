@@ -155,7 +155,7 @@ FUZZ_TARGET(script, .init = initialize_script)
 
         if (!std::get_if<PubKeyDestination>(&tx_destination_1)) {
             // Only try to round trip non-pubkey destinations since PubKeyDestination has no encoding
-            Assert(dest.empty() != valid);
+            // Assert(dest.empty() != valid); // ELEMENTS: CNoDestination can have a script but is still not a valid destination
             Assert(tx_destination_1 == DecodeDestination(encoded_dest));
             Assert(valid == IsValidDestinationString(encoded_dest));
         }

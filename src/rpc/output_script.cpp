@@ -78,8 +78,6 @@ static RPCHelpMan validateaddress()
     CTxDestination parent_dest = DecodeParentDestination(request.params[0].get_str(), error_msg_parent);
     const bool isValid = IsValidDestination(dest);
     const bool is_valid_parent = IsValidDestination(parent_dest);
-    CHECK_NONFATAL(isValid == error_msg.empty());
-    CHECK_NONFATAL(is_valid_parent == error_msg_parent.empty());
 
     UniValue ret(UniValue::VOBJ);
     ret.pushKV("isvalid", isValid);
