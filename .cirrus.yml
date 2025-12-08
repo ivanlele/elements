@@ -103,8 +103,9 @@ task:
 task:
   name: 'tidy'
   << : *GLOBAL_TASK_TEMPLATE
+  timeout_in: 180m # ELEMENTS
   container:
-    image: ubuntu:24.04
+    image: docker.io/ubuntu:24.04
   env:
     << : *CIRRUS_EPHEMERAL_WORKER_TEMPLATE_ENV
     FILE_ENV: "./ci/test/00_setup_env_native_tidy.sh"
@@ -187,7 +188,7 @@ task:
   name: 'fuzzer,address,undefined,integer, no depends'
   << : *GLOBAL_TASK_TEMPLATE
   container:
-    image: ubuntu:24.04
+    image: docker.io/ubuntu:24.04
     cpu: 8
     memory: 16G
   env:
