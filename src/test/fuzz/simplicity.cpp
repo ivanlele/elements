@@ -69,7 +69,7 @@ uint32_t read_u32(const unsigned char **buf) {
     uint32_t ret;
     memcpy(&ret, *buf, 4);
     *buf += 4;
-    return le32toh(ret);
+    return le32toh_internal(ret);
 }
 
 #define MAX_LEN (1024 * 1024)

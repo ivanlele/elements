@@ -84,13 +84,13 @@ static inline int64_t read_le8_signed(const unsigned char* ptr)
 
 static inline void push4_le(std::vector<valtype>& stack, uint32_t v)
 {
-    uint32_t v_le = htole32(v);
+    uint32_t v_le = htole32_internal(v);
     stack.emplace_back(reinterpret_cast<unsigned char*>(&v_le), reinterpret_cast<unsigned char*>(&v_le) + sizeof(v_le));
 }
 
 static inline void push8_le(std::vector<valtype>& stack, uint64_t v)
 {
-    uint64_t v_le = htole64(v);
+    uint64_t v_le = htole64_internal(v);
     stack.emplace_back(reinterpret_cast<unsigned char*>(&v_le), reinterpret_cast<unsigned char*>(&v_le) + sizeof(v_le));
 }
 
@@ -1663,7 +1663,7 @@ bool EvalScript(std::vector<std::vector<unsigned char> >& stack, const CScript& 
                     hasher.Write(vchSeed.data(), vchSeed.size());
                     do {
                         if (nHashIndex >= 3) {
-                            uint64_t le_counter = htole64(nCounter);
+                            uint64_t le_counter = htole64_internal(nCounter);
                             CSHA256(hasher).Write((const unsigned char*)&le_counter, sizeof(nCounter)).Finalize(vchHash.data());
                             nHashIndex = 0;
                             nCounter++;
