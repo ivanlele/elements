@@ -11,7 +11,8 @@ export LC_ALL=C.UTF-8
 export PIP_PACKAGES="--break-system-packages zmq"
 export GOAL="install"
 # ELEMENTS: add -fno-stack-check to work around clang bug on macos
-export BITCOIN_CONFIG="--with-gui --with-miniupnpc --with-natpmp --enable-reduce-exports CXXFLAGS=-fno-stack-check"
+# ELEMENTS: add -Wno-error=deprecated-declarations for C++20 deprecation warnings with boost 1.85
+export BITCOIN_CONFIG="--with-gui --with-miniupnpc --with-natpmp --enable-reduce-exports CXXFLAGS='-fno-stack-check -Wno-error=deprecated-declarations'"
 export CI_OS_NAME="macos"
 export NO_DEPENDS=1
 export OSX_SDK=""
