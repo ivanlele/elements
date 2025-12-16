@@ -775,7 +775,7 @@ class WalletMigrationTest(BitcoinTestFramework):
         self.generate(self.nodes[0], 1)
 
         # parent tx
-        parent_txid = wallet.sendtoaddress(wallet.getnewaddress(), 9, replaceable=True) # ELEMENTS FIXME: investigate RBF
+        parent_txid = wallet.sendtoaddress(wallet.getnewaddress(), 9, replaceable=True) # ELEMENTS: walletrbf=0 is set by default in the test_framework wallet config
         parent_txid_bytes = bytes.fromhex(parent_txid)[::-1]
         conflict_utxo = wallet.gettransaction(txid=parent_txid, verbose=True)["decoded"]["vin"][0]
         value = sum([out["value"] for out in wallet.gettransaction(txid=parent_txid, verbose=True)["decoded"]["vout"]]) # ELEMENTS
@@ -977,7 +977,7 @@ class WalletMigrationTest(BitcoinTestFramework):
         # Create tx and bump it to store 'replaced_by_txid' and 'replaces_txid' data within the transactions.
         # Additionally, store an extra comment within the original tx.
         extra_comment = "don't discard me"
-        original_tx_id = wallet.sendtoaddress(address=wallet.getnewaddress(), amount=1, comment=extra_comment, replaceable=True) # ELEMENTS FIXME
+        original_tx_id = wallet.sendtoaddress(address=wallet.getnewaddress(), amount=1, comment=extra_comment, replaceable=True) # ELEMENTS: walletrbf=0 is set by default in the test_framework wallet config
         bumped_tx = wallet.bumpfee(txid=original_tx_id)
 
         def check_comments():
