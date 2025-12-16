@@ -258,8 +258,7 @@ class ToolWalletTest(BitcoinTestFramework):
         # TODO: Wallet tool info should not write to the wallet file.
         # This assertion should be uncommented and succeed:
         # assert_equal(timestamp_before, timestamp_after)
-        if not self.options.descriptors: # ELEMENTS FIXME
-            assert_equal(shasum_before, shasum_after)
+        assert_equal(shasum_before, shasum_after)
         self.log.debug('Wallet file shasum unchanged\n')
 
     def test_tool_wallet_create_on_existing_wallet(self):
@@ -409,7 +408,7 @@ class ToolWalletTest(BitcoinTestFramework):
         self.generate(self.nodes[0], 1)
 
         # parent tx
-        parent_txid = wallet.sendtoaddress(wallet.getnewaddress(), 9, replaceable=True) # ELEMENTS FIXME: replaceable should be true by default, investigate
+        parent_txid = wallet.sendtoaddress(wallet.getnewaddress(), 9, replaceable=True) # ELEMENTS: walletrbf=0 by default in test_framework wallet config
         parent_txid_bytes = bytes.fromhex(parent_txid)[::-1]
         conflict_utxo = wallet.gettransaction(txid=parent_txid, verbose=True)["decoded"]["vin"][0]
         value = sum([out["value"] for out in wallet.gettransaction(txid=parent_txid, verbose=True)["decoded"]["vout"]]) # ELEMENTS
