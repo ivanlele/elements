@@ -1223,7 +1223,7 @@ class SegWitTest(BitcoinTestFramework):
 
         block = self.build_next_block()
         self.update_witness_block_with_transactions(block, [tx2])
-        test_witness_block(self.nodes[0], self.test_node, block, accepted=False, reason='bad-witness-merkle-match') # ELEMENTS: FIXME why is this reason different
+        test_witness_block(self.nodes[0], self.test_node, block, accepted=False, reason='bad-witness-merkle-match') # ELEMENTS: reason due to CheckWitnessMalleation and elements-style witness structure
 
         # Now try using a too short vtxinwit
         tx2.wit.vtxinwit.pop()
