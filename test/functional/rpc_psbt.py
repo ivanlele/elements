@@ -1090,8 +1090,8 @@ class PSBTTest(BitcoinTestFramework):
         updated = self.nodes[1].utxoupdatepsbt(psbt=psbt, descriptors=descs)
         decoded = self.nodes[1].decodepsbt(updated)
         test_psbt_input_keys(decoded['inputs'][0], psbt_v2_required_keys + ['witness_utxo', 'non_witness_utxo', 'bip32_derivs'])
-        # test_psbt_input_keys(decoded['inputs'][1], psbt_v2_required_keys + ['non_witness_utxo', 'bip32_derivs']) # ELEMENTS FIXME: flaky
-        # test_psbt_input_keys(decoded['inputs'][2], psbt_v2_required_keys + ['non_witness_utxo'])
+        test_psbt_input_keys(decoded['inputs'][1], psbt_v2_required_keys + ['non_witness_utxo', 'bip32_derivs'])
+        test_psbt_input_keys(decoded['inputs'][2], psbt_v2_required_keys + ['non_witness_utxo', 'bip32_derivs', 'redeem_script', 'witness_utxo'])
 
         # Cannot create PSBTv0
         assert_raises_rpc_error(-8, "The PSBT version can only be 2", self.nodes[0].createpsbt, [utxo1], [{self.nodes[0].getnewaddress():Decimal('10.999')}], 0, True, 0)
@@ -1336,17 +1336,17 @@ class PSBTTest(BitcoinTestFramework):
             self.generate(self.nodes[0], 1)
             self.nodes[0].importdescriptors([{"desc": descsum_create("tr({})".format(privkey)), "timestamp":"now"}])
 
-            # psbt = watchonly.walletcreatefundedpsbt([], [{wallet.getnewaddress(): watchonly.getbalance()['bitcoin']}], None, {"subtractFeeFromOutputs": [0]})['psbt']
-            # ELEMENTS: FIXME
-            # psbt = watchonly.sendall([wallet.getnewaddress(), addr])["psbt"]
-            # processed_psbt = self.nodes[0].walletprocesspsbt(psbt)
-            # txid = self.nodes[0].sendrawtransaction(processed_psbt["hex"])
-            # vout = find_vout_for_address(self.nodes[0], txid, addr)
+            psbt = watchonly.walletcreatefundedpsbt([], [{wallet.getnewaddress(): watchonly.getbalance()['bitcoin']}], None, {"subtractFeeFromOutputs": [0]})['psbt']
+            psbt = watchonly.sendall([wallet.getnewaddress(), addr])["psbt"]
+            processed_psbt = self.nodes[0].walletprocesspsbt(psbt)
+            txid = self.nodes[0].sendrawtransaction(processed_psbt["hex"])
+            vout = find_vout_for_address(self.nodes[0], txid, addr)
 
             # # Make sure tap tree is in psbt
+            assert "taproot_tree" in self.nodes[0].decodepsbt(psbt)["outputs"][vout]
+            # ELEMENTS: v2 not deserialisable with PSBT_GLOBAL_UNSIGNED_TX, version 0 not allowed
             # parsed_psbt = PSBT.from_base64(psbt)
             # assert_greater_than(len(parsed_psbt.o[vout].map[PSBT_OUT_TAP_TREE]), 0)
-            # assert "taproot_tree" in self.nodes[0].decodepsbt(psbt)["outputs"][vout]
             # parsed_psbt.make_blank()
             # comb_psbt = self.nodes[0].combinepsbt([psbt, parsed_psbt.to_base64()])
             # assert_equal(comb_psbt, psbt)
@@ -1361,10 +1361,10 @@ class PSBTTest(BitcoinTestFramework):
             self.generate(self.nodes[0], 1)
 
             # Make sure tap tree is not in psbt
-            # ELEMENTS: FIXME
+            assert "taproot_tree" not in self.nodes[0].decodepsbt(psbt)["outputs"][0]
+            # ELEMENTS: v2 not deserialisable with PSBT_GLOBAL_UNSIGNED_TX, version 0 not allowed
             # parsed_psbt = PSBT.from_base64(psbt)
             # assert PSBT_OUT_TAP_TREE not in parsed_psbt.o[0].map
-            # assert "taproot_tree" not in self.nodes[0].decodepsbt(psbt)["outputs"][0]
             # parsed_psbt.make_blank()
             # comb_psbt = self.nodes[0].combinepsbt([psbt, parsed_psbt.to_base64()])
             # assert_equal(comb_psbt, psbt)
@@ -1372,7 +1372,7 @@ class PSBTTest(BitcoinTestFramework):
         self.log.info("Test walletprocesspsbt raises if an invalid sighashtype is passed")
         assert_raises_rpc_error(-8, "all is not a valid sighash parameter.", self.nodes[0].walletprocesspsbt, psbt, sighashtype="all")
 
-        # ELEMENTS FIXME
+        # ELEMENTS TODO: : v2 not deserialisable with PSBT_GLOBAL_UNSIGNED_TX, version 0 not allowed
         # self.log.info("Test decoding PSBT with per-input preimage types")
         # # note that the decodepsbt RPC doesn't check whether preimages and hashes match
         # hash_ripemd160, preimage_ripemd160 = randbytes(20), randbytes(50)
@@ -1404,7 +1404,7 @@ class PSBTTest(BitcoinTestFramework):
         #     assert hash.hex() in res_input[preimage_key]
         #     assert_equal(res_input[preimage_key][hash.hex()], preimage.hex())
 
-        # ELEMENTS FIXME
+        # ELEMENTS TODO: : v2 not deserialisable with PSBT_GLOBAL_UNSIGNED_TX, version 0 not allowed
         # self.log.info("Test that combining PSBTs with different transactions fails")
         # tx = CTransaction()
         # tx.vin = [CTxIn(outpoint=COutPoint(hash=int('aa' * 32, 16), n=0), scriptSig=b"")]
@@ -1415,7 +1415,7 @@ class PSBTTest(BitcoinTestFramework):
         # assert_raises_rpc_error(-8, "PSBTs not compatible (different transactions)", self.nodes[0].combinepsbt, [psbt1, psbt2])
         # assert_equal(self.nodes[0].combinepsbt([psbt1, psbt1]), psbt1)
 
-        # ELEMENTS FIXME
+        # ELEMENTS TODO: : v2 not deserialisable with PSBT_GLOBAL_UNSIGNED_TX, version 0 not allowed
         # self.log.info("Test that PSBT inputs are being checked via script execution")
         # acs_prevout = CTxOut(nValue=0, scriptPubKey=CScript([OP_TRUE]))
         # tx = CTransaction()
