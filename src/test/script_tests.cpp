@@ -1875,7 +1875,6 @@ BOOST_AUTO_TEST_CASE(script_assets_test)
     file.close();
 }
 
-// ELEMENTS FIXME: Some of these test vectors need updating
 BOOST_AUTO_TEST_CASE(bip341_keypath_test_vectors)
 {
     UniValue tests;
@@ -1903,8 +1902,7 @@ BOOST_AUTO_TEST_CASE(bip341_keypath_test_vectors)
         }
 
         BOOST_CHECK(txdata.m_bip341_taproot_ready);
-        // ELEMENTS: FIXME
-        //BOOST_CHECK_EQUAL(HexStr(txdata.m_spent_amounts_single_hash), vec["intermediary"]["hashAmounts"].get_str());
+        BOOST_CHECK_EQUAL(HexStr(txdata.m_spent_asset_amounts_single_hash), vec["intermediary"]["hashAmounts"].get_str());
         BOOST_CHECK_EQUAL(HexStr(txdata.m_outputs_single_hash), vec["intermediary"]["hashOutputs"].get_str());
         BOOST_CHECK_EQUAL(HexStr(txdata.m_prevouts_single_hash), vec["intermediary"]["hashPrevouts"].get_str());
         BOOST_CHECK_EQUAL(HexStr(txdata.m_spent_scripts_single_hash), vec["intermediary"]["hashScriptPubkeys"].get_str());
@@ -1935,12 +1933,10 @@ BOOST_AUTO_TEST_CASE(bip341_keypath_test_vectors)
             MutableTransactionSignatureCreator creator(tx, txinpos, utxos[txinpos].nValue, &txdata, hashtype);
             std::vector<unsigned char> signature;
             BOOST_CHECK(creator.CreateSchnorrSig(provider, signature, pubkey, nullptr, &merkle_root, SigVersion::TAPROOT));
-            // ELEMENTS: FIXME
-            //BOOST_CHECK_EQUAL(HexStr(signature), input["expected"]["witness"][0].get_str());
+            BOOST_CHECK_EQUAL(HexStr(signature), input["expected"]["witness"][0].get_str());
 
             // We can't observe the tweak used inside the signing logic, so verify by recomputing it.
-            // ELEMENTS: FIXME
-            //BOOST_CHECK_EQUAL(HexStr(pubkey.ComputeTapTweakHash(merkle_root.IsNull() ? nullptr : &merkle_root)), input["intermediary"]["tweak"].get_str());
+            BOOST_CHECK_EQUAL(HexStr(pubkey.ComputeTapTweakHash(merkle_root.IsNull() ? nullptr : &merkle_root)), input["intermediary"]["tweak"].get_str());
 
             // We can't observe the sighash used inside the signing logic, so verify by recomputing it.
             ScriptExecutionData sed;
@@ -1951,8 +1947,7 @@ BOOST_AUTO_TEST_CASE(bip341_keypath_test_vectors)
             // BOOST_CHECK_EQUAL(HexStr(sighash), input["intermediary"]["sigHash"].get_str());
 
             // To verify the sigmsg, hash the expected sigmsg, and compare it with the (expected) sighash.
-            // ELEMENTS: FIXME
-            // BOOST_CHECK_EQUAL(HexStr((HashWriter{HASHER_TAPSIGHASH_ELEMENTS} << Span{ParseHex(input["intermediary"]["sigMsg"].get_str())}).GetSHA256()), input["intermediary"]["sigHash"].get_str());
+            BOOST_CHECK_EQUAL(HexStr((HashWriter{HASHER_TAPSIGHASH_ELEMENTS} << Span{ParseHex(input["intermediary"]["sigMsg"].get_str())}).GetSHA256()), input["intermediary"]["sigHash"].get_str());
         }
 
     }
