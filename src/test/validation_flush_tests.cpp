@@ -46,17 +46,7 @@ BOOST_AUTO_TEST_CASE(getcoinscachesizestate)
     // If the initial memory allocations of cacheCoins don't match these common
     // cases, we can't really continue to make assertions about memory usage.
     // End the test early.
-    // ELEMENTS: These tests are fragile even on Bitcoin, as evidenced by
-    //  the wide numeric ranges which are set ad-hoc all over the place.
-    //  I tried probably 30 times to change the values so that they'd work
-    //  on Cirrus for Elements, but there are just too many of values and it
-    //  is impossible to guess the exact memory usage of libstd collections
-    //  on CI boxes, and they change whenever I tweak other memory-related
-    //  parameters. So instead I'm just forcing (in a way the compiler won't
-    //  recognize as an `if (true) { ... return }` block) the "unknown arch"
-    //  path, which does a simple/crude check and returns.
-    //if (view.DynamicMemoryUsage() != 32 && view.DynamicMemoryUsage() != 16) {
-    if (view.DynamicMemoryUsage() < 1000) {
+    if (view.DynamicMemoryUsage() != 32 && view.DynamicMemoryUsage() != 16) {
         // Add a bunch of coins to see that we at least flip over to CRITICAL.
 
         for (int i{0}; i < 1000; ++i) {
@@ -73,7 +63,7 @@ BOOST_AUTO_TEST_CASE(getcoinscachesizestate)
     }
 
     print_view_mem_usage(view);
-    // BOOST_CHECK_EQUAL(view.DynamicMemoryUsage(), is_64_bit ? 262240U : 16U); // ELEMENTS FIXME differs on macos ci [262208 != 262240]
+    BOOST_CHECK_EQUAL(view.DynamicMemoryUsage(), is_64_bit ? 32U : 16U);
 
     // We should be able to add COINS_UNTIL_CRITICAL coins to the cache before going CRITICAL.
     // This is contingent not only on the dynamic memory usage of the Coins
@@ -82,10 +72,9 @@ BOOST_AUTO_TEST_CASE(getcoinscachesizestate)
     constexpr int COINS_UNTIL_CRITICAL{3};
 
     // no coin added, so we have plenty of space left.
-    // ELEMENTS FIXME
-    // BOOST_CHECK_EQUAL(
-    //     chainstate.GetCoinsCacheSizeState(MAX_COINS_CACHE_BYTES, /*max_mempool_size_bytes*/ 0),
-    //     CoinsCacheSizeState::OK);
+    BOOST_CHECK_EQUAL(
+        chainstate.GetCoinsCacheSizeState(MAX_COINS_CACHE_BYTES, /*max_mempool_size_bytes*/ 0),
+        CoinsCacheSizeState::OK);
 
     for (int i{0}; i < COINS_UNTIL_CRITICAL; ++i) {
         const COutPoint res = AddTestCoin(view);
@@ -160,10 +149,9 @@ BOOST_AUTO_TEST_CASE(getcoinscachesizestate)
     BOOST_CHECK(view.Flush());
     print_view_mem_usage(view);
 
-    // ELEMENTS FIXME
-    // BOOST_CHECK_EQUAL(
-    //     chainstate.GetCoinsCacheSizeState(MAX_COINS_CACHE_BYTES, 0),
-    //     CoinsCacheSizeState::OK);
+    BOOST_CHECK_EQUAL(
+        chainstate.GetCoinsCacheSizeState(MAX_COINS_CACHE_BYTES, 0),
+        CoinsCacheSizeState::OK);
 }
 
 BOOST_AUTO_TEST_SUITE_END()
