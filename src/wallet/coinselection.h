@@ -105,6 +105,7 @@ public:
         return outpoint < rhs.outpoint;
     }
 
+    // ELEMENTS: ApplyBumpFee applied only for policyAsset
     void ApplyBumpFee(CAmount bump_fee)
     {
         assert(bump_fee >= 0);
@@ -112,7 +113,7 @@ public:
         assert(fee);
         *fee += bump_fee;
         // Note: assert(effective_value - bump_fee == nValue - fee.value());
-        effective_value = value - fee.value(); // ELEMENTS FIXME
+        effective_value = value - fee.value();
     }
 
     CAmount GetFee() const
