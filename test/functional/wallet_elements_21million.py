@@ -143,10 +143,10 @@ class WalletTest(BitcoinTestFramework):
         assert_raises_rpc_error(-26, "issuance-out-of-range", self.nodes[2].sendrawtransaction, reissuance_tx['hex'])
         # transaction should be accepted on node 0
         self.nodes[0].sendrawtransaction(reissuance_tx["hex"])
-        assert(reissuance['txid'] in self.nodes[0].getrawmempool())
-        assert(reissuance['txid'] not in self.nodes[2].getrawmempool())
+        assert reissuance['txid'] in self.nodes[0].getrawmempool()
+        assert reissuance['txid'] not in self.nodes[2].getrawmempool()
         self.generate(self.nodes[0], 1)
-        assert(asset not in self.nodes[0].getbalance())
+        assert asset not in self.nodes[0].getbalance()
         assert_equal(self.nodes[2].getbalance()[asset], 203_000_000)
 
         self.log.info("Issue more than 21 million reissuance tokens on node 2 - rejected from mempool")
@@ -156,14 +156,14 @@ class WalletTest(BitcoinTestFramework):
         issuance_tx = self.nodes[2].gettransaction(issuance["txid"])
         assert_raises_rpc_error(-26, "issuance-out-of-range", self.nodes[2].sendrawtransaction, issuance_tx['hex'])
         self.generate(self.nodes[0], 1)
-        assert(asset not in self.nodes[2].getbalance())
-        assert(token not in self.nodes[2].getbalance())
+        assert asset not in self.nodes[2].getbalance()
+        assert token not in self.nodes[2].getbalance()
         # transaction should be accepted on node 0
         self.nodes[0].sendrawtransaction(issuance_tx["hex"])
-        assert(issuance['txid'] in self.nodes[0].getrawmempool())
-        assert(issuance['txid'] not in self.nodes[2].getrawmempool())
+        assert issuance['txid'] in self.nodes[0].getrawmempool()
+        assert issuance['txid'] not in self.nodes[2].getrawmempool()
         self.generate(self.nodes[0], 1)
-        assert(asset not in self.nodes[0].getbalance())
+        assert asset not in self.nodes[0].getbalance()
         assert_equal(self.nodes[2].getbalance()[asset], 3_000_000)
         assert_equal(self.nodes[2].getbalance()[token], 200_000_000)
 
