@@ -55,8 +55,6 @@ class DustRelayFeeTest(BitcoinTestFramework):
             dust_threshold = int(get_fee(tx_size, dust_relay_fee) * COIN)
         self.log.info(f"-> Test {type_desc} output (size {len(output_script)}, limit {dust_threshold})")
 
-        print(dust_threshold)
-
         # amount right on the dust threshold should pass
         if dust_threshold > 0:
             tx = self.wallet.create_self_transfer()["tx"]

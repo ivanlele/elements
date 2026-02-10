@@ -88,8 +88,6 @@ class ScanblocksTest(BitcoinTestFramework):
         # coinbase output and verify that their BIP158 ranged hashes match
         # ELEMENTS: use block 1 for coinbase spk
         genesis_blockhash = node.getblockhash(1)
-        print(genesis_blockhash)
-        print("")
         genesis_spks = bip158_relevant_scriptpubkeys(node, genesis_blockhash)
         assert_equal(len(genesis_spks), 1)
         genesis_coinbase_spk = list(genesis_spks)[0]
