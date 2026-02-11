@@ -12,12 +12,14 @@
 #include <chainparamsbase.h>
 #include <common/args.h>
 #include <consensus/params.h>
+#include <crypto/sha256.h>
 #include <deploymentinfo.h>
 #include <issuance.h>
 #include <primitives/transaction.h>
 #include <logging.h>
 #include <tinyformat.h>
 #include <util/chaintype.h>
+#include <util/moneystr.h>
 #include <util/strencodings.h>
 #include <util/string.h>
 #include <crypto/sha256.h>

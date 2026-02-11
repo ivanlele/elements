@@ -244,6 +244,7 @@ BASE_SCRIPTS = [
     'feature_discount_ct_ordering.py',
     'p2p_block_sync.py',
     'p2p_block_sync.py --v2transport',
+    'feature_pegin_subsidy.py --legacy-wallet',
     'wallet_createwallet.py --legacy-wallet',
     'wallet_createwallet.py --usecli',
     'wallet_createwallet.py --descriptors',
