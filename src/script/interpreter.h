@@ -9,9 +9,6 @@
 #include <consensus/amount.h>
 #include <hash.h>
 #include <primitives/transaction.h>
-extern "C" {
-#include <simplicity/elements/env.h>
-}
 #include <script/script_error.h> // IWYU pragma: export
 #include <span.h>
 #include <uint256.h>
@@ -171,12 +168,13 @@ enum : uint32_t {
 
 bool CheckSignatureEncoding(const std::vector<unsigned char> &vchSig, unsigned int flags, ScriptError* serror);
 
+// Forward declarations of Simplicity structures.
+struct elementsTransaction;
+struct rawElementsTapEnv;
+
 struct SimplicityTransactionDeleter
 {
-    void operator()(elementsTransaction* ptr)
-    {
-        simplicity_elements_freeTransaction(ptr);
-    }
+    void operator()(elementsTransaction* ptr) const;
 };
 using SimplicityTransactionUniquePtr = std::unique_ptr<elementsTransaction, SimplicityTransactionDeleter>;
 
