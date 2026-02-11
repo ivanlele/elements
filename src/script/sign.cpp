@@ -279,7 +279,7 @@ struct WshSatisfier: Satisfier<CPubKey> {
 
     //! Satisfy an ECDSA signature check.
     miniscript::Availability Sign(const CPubKey& key, std::vector<unsigned char>& sig) const {
-        if (CreateSig(m_creator, m_sig_data, m_provider, sig, key, m_witness_script, SigVersion::WITNESS_V0, SIGHASH_RANGEPROOF)) { // ELEMENTS FIXME: check flags
+        if (CreateSig(m_creator, m_sig_data, m_provider, sig, key, m_witness_script, SigVersion::WITNESS_V0, SIGHASH_RANGEPROOF)) {
             return miniscript::Availability::YES;
         }
         return miniscript::Availability::NO;
