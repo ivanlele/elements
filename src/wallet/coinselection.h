@@ -468,9 +468,6 @@ util::Result<SelectionResult> KnapsackSolver(std::vector<OutputGroup>& groups, c
 // Knapsack that delegates for every asset individually.
 util::Result<SelectionResult> KnapsackSolver(std::vector<OutputGroup>& groups, const CAmountMap& mapTargetValue,
                                               CAmount change_target, FastRandomContext& rng, int max_weight);
-
-// Get coin selection waste for a map of asset->amount.
-// [[nodiscard]] CAmount GetSelectionWaste(const std::set<COutput>& inputs, CAmount change_cost, const CAmountMap& target_map, bool use_effective_value);
 } // namespace wallet
 
 #endif // BITCOIN_WALLET_COINSELECTION_H
