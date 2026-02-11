@@ -370,7 +370,9 @@ class MiniWallet:
         assert fee_rate >= 0
         assert fee >= 0
         # calculate fee
-        if self._mode in (MiniWalletMode.RAW_OP_TRUE, MiniWalletMode.ADDRESS_OP_TRUE):
+        if self._mode == MiniWalletMode.RAW_OP_TRUE:
+            vsize = Decimal(184)  # raw-op-true
+        elif self._mode == MiniWalletMode.ADDRESS_OP_TRUE:
             vsize = Decimal(185)  # anyone-can-spend
         elif self._mode == MiniWalletMode.RAW_P2PK:
             vsize = Decimal(248)  # P2PK (73 bytes scriptSig + 35 bytes scriptPubKey + 60 bytes other)
@@ -394,7 +396,7 @@ class MiniWallet:
         )
 
         if not target_weight:
-            assert_approx(tx["tx"].get_vsize(), vsize, 1) # ELEMENTS FIXME: feature_cltv is 184 instead of 185
+            assert_equal(tx["tx"].get_vsize(), vsize)
         tx["new_utxo"] = tx.pop("new_utxos")[0]
 
         return tx
