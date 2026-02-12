@@ -23,6 +23,7 @@ CTxMemPool::Options MemPoolOptionsForTest(const NodeContext& node)
         // chainparams.DefaultConsistencyChecks for tests
         .check_ratio = 1,
         .incremental_relay_feerate = CFeeRate(1000), // ELEMENTS: use upstream incremental relay feerate
+        .signals = node.validation_signals.get(),
     };
     const auto result{ApplyArgsManOptions(*node.args, ::Params(), mempool_opts)};
     Assert(result);
