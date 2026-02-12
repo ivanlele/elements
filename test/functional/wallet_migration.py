@@ -533,10 +533,19 @@ class WalletMigrationTest(BitcoinTestFramework):
         (self.nodes[0].wallets_path / "wallet.dat").unlink()
         wallet = self.create_legacy_wallet("")
 
-        self.migrate_wallet(wallet)
+        # Set time to verify backup existence later
+        curr_time = int(time.time())
+        wallet.setmocktime(curr_time)
+
+        res = self.migrate_wallet(wallet)
         info = wallet.getwalletinfo()
         assert_equal(info["descriptors"], True)
         assert_equal(info["format"], "sqlite")
+
+        # Check backup existence and its non-empty wallet filename
+        backup_path = self.nodes[0].wallets_path / f'default_wallet_{curr_time}.legacy.bak'
+        assert backup_path.exists()
+        assert_equal(str(backup_path), res['backup_path'])
 
     def test_direct_file(self):
         self.log.info("Test migration of a wallet that is not in a wallet directory")
