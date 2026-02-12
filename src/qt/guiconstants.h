@@ -50,8 +50,8 @@ static const int TOOLTIP_WRAP_THRESHOLD = 80;
 /* Number of frames in spinner animation */
 #define SPINNER_FRAMES 36
 
-#define QAPP_ORG_NAME "Bitcoin"
-#define QAPP_ORG_DOMAIN "bitcoin.org"
+#define QAPP_ORG_NAME "Elements"
+#define QAPP_ORG_DOMAIN "elementsproject.org"
 
 #define QAPP_APP_NAME_DEFAULT "Elements-Qt"
 #define QAPP_APP_NAME_TESTNET "Elements-Qt-testnet"
