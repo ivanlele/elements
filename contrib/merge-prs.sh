@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 export LC_ALL=C
-set -o pipefail
+set -eo pipefail
 
 # Setup base branch and Bitcoin/Elements remote names.
 BASE_ORIG=merged-master
@@ -15,8 +15,10 @@ export ELEMENTS_UPSTREAM="${ELEMENTS_UPSTREAM_REMOTE}/master"
 # Set your target upstream here
 TARGET_UPSTREAM=$BITCOIN_UPSTREAM
 TARGET_NAME="Bitcoin"
+PR_PREFIX="bitcoin/bitcoin"
 # TARGET_UPSTREAM=$ELEMENTS_UPSTREAM
 # TARGET_NAME="Elements"
+# PR_PREFIX="ElementsProject/elements"
 
 # Set your git worktree location here. This is where the merges will be done, and where you should checkout the merged-master branch.
 WORKTREE="/home/ivan/blockstream/elements-worktree"
@@ -167,11 +169,6 @@ do
     HASH=$(echo "$line" | cut -d ' ' -f 3)
     CHAIN=$(echo "$line" | cut -d ' ' -f 4)
     PR_ID=$(echo "$line" | grep -o -P "#\d+")
-    PR_ID_ALT=$(echo "$line" | cut -d ' ' -f 8 | tr -d :)
-
-    if [[ "$PR_ID" == "pull" ]]; then
-	PR_ID="${PR_ID_ALT}"
-    fi
 
 	GIT_HEAD=$(git rev-parse HEAD)
 
@@ -186,7 +183,7 @@ do
         # CRITICAL_FILES=("src/wallet/spend.h", "src/wallet/spend.cpp")
         MERGE_FILE="/tmp/$HASH.merge"
         DIFF_FILE="/tmp/$HASH.diff"
-        git -C "$WORKTREE" merge "$HASH" --no-ff -m "Merge $HASH into merged_master ($CHAIN PR $PR_ID)" > "$MERGE_FILE"
+        git -C "$WORKTREE" merge "$HASH" --no-ff -m "Merge $HASH into merged_master ($CHAIN PR $PR_PREFIX$PR_ID)" > "$MERGE_FILE" || true
         git -C "$WORKTREE" diff > "$DIFF_FILE"
         git -C "$WORKTREE" reset --hard "$GIT_HEAD" > /dev/null
         # FILES=$(grep "CONFLICT" "$MERGE_FILE")
@@ -223,7 +220,7 @@ do
         echo -e "Continuing build of \e[37m$PR_ID\e[0m at $(date)"
     else
         echo -e "Start merge/build of \e[37m$PR_ID\e[0m at $(date)"
-        git -C "$WORKTREE" merge "$HASH" --no-ff -m "Merge $HASH into merged_master ($CHAIN PR $PR_ID)" || notify "fail merge" 1
+        git -C "$WORKTREE" merge "$HASH" --no-ff -m "Merge $HASH into merged_master ($CHAIN PR $PR_PREFIX$PR_ID)" || notify "fail merge" 1
     fi
 
     if [[ "$DO_BUILD" == "1" ]]; then
