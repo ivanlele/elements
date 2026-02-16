@@ -902,8 +902,9 @@ static RPCHelpMan submitpackage()
                                        "TX decode failed: " + rawtx.get_str() + " Make sure the tx has at least one input.");
                 }
 
+                const uint256& parent_blockhash = Params().ParentGenesisBlockHash();
                 for (const auto& out : mtx.vout) {
-                    if((out.scriptPubKey.IsUnspendable() || !out.scriptPubKey.HasValidOps()) && out.nValue > max_burn_amount) {
+                    if(((out.scriptPubKey.IsUnspendableNotFee() && !out.scriptPubKey.IsPegoutScript(parent_blockhash)) || !out.scriptPubKey.HasValidOps()) && out.nValue.IsExplicit() && out.nValue.GetAmount() > max_burn_amount) {
                         throw JSONRPCTransactionError(TransactionError::MAX_BURN_EXCEEDED);
                     }
                 }

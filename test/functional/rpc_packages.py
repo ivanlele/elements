@@ -11,6 +11,7 @@ from test_framework.blocktools import COINBASE_MATURITY
 from test_framework.messages import (
     MAX_BIP125_RBF_SEQUENCE,
     tx_from_hex,
+    COIN,
 )
 from test_framework.p2p import P2PTxInvStore
 from test_framework.test_framework import BitcoinTestFramework
@@ -366,16 +367,16 @@ class RPCPackagesTest(BitcoinTestFramework):
 
         self.log.info("Submitpackage maxfeerate arg testing")
         chained_txns = self.wallet.create_self_transfer_chain(chain_length=2)
-        minrate_btc_kvb = min([chained_txn["fee"] / chained_txn["tx"].get_vsize() * 1000 for chained_txn in chained_txns])
+        minrate_btc_kvb = min([(chained_txn["fee"] / COIN) / chained_txn["tx"].get_vsize() * 1000 for chained_txn in chained_txns])
         chain_hex = [t["hex"] for t in chained_txns]
-        pkg_result = node.submitpackage(chain_hex, maxfeerate=minrate_btc_kvb - Decimal("0.00000001"))
+        pkg_result = node.submitpackage(chain_hex, maxfeerate=minrate_btc_kvb-0.00000001)
         assert_equal(pkg_result["tx-results"][chained_txns[0]["wtxid"]]["error"], "max feerate exceeded")
         assert_equal(pkg_result["tx-results"][chained_txns[1]["wtxid"]]["error"], "bad-txns-inputs-missingorspent")
         assert_equal(node.getrawmempool(), [])
 
         self.log.info("Submitpackage maxburnamount arg testing")
         tx = tx_from_hex(chain_hex[1])
-        tx.vout[-1].scriptPubKey = b'a' * 10001 # scriptPubKey bigger than 10k IsUnspendable
+        tx.vout[0].scriptPubKey = b'a' * 10001 # scriptPubKey bigger than 10k IsUnspendable
         chain_hex = [chain_hex[0], tx.serialize().hex()]
         # burn test is run before any package evaluation; nothing makes it in and we get broader exception
         assert_raises_rpc_error(-25, "Unspendable output exceeds maximum configured by user", node.submitpackage, chain_hex, 0, chained_txns[1]["new_utxo"]["value"] - Decimal("0.00000001"))

@@ -323,7 +323,7 @@ class MempoolLimitTest(BitcoinTestFramework):
         tx_child = miniwallet.create_self_transfer_multi(utxos_to_spend=coins, fee_per_output=10000) #DEFAULT_FEE
         package_txns.append(tx_child)
 
-        submitpackage_result = node.submitpackage([tx["hex"] for tx in package_txns])
+        submitpackage_result = node.submitpackage([tx["hex"] for tx in package_txns], maxfeerate=0)
         assert_equal(submitpackage_result["package_msg"], "success")
 
         rich_parent_result = submitpackage_result["tx-results"][tx_rich["wtxid"]]
