@@ -2302,10 +2302,10 @@ bool CheckInputScripts(const CTransaction& tx, TxValidationState& state,
     return true;
 }
 
-bool FatalError(Notifications& notifications, BlockValidationState& state, const std::string& strMessage, const bilingual_str& userMessage)
+bool FatalError(Notifications& notifications, BlockValidationState& state, const bilingual_str& message)
 {
-    notifications.fatalError(strMessage, userMessage);
-    return state.Error(strMessage);
+    notifications.fatalError(message);
+    return state.Error(message.original);
 }
 
 /**
@@ -2612,7 +2612,7 @@ bool Chainstate::ConnectBlock(const CBlock& block, BlockValidationState& state, 
             // We don't write down blocks to disk if they may have been
             // corrupted, so this should be impossible unless we're having hardware
             // problems.
-            return FatalError(m_chainman.GetNotifications(), state, "Corrupt block found indicating potential hardware failure; shutting down");
+            return FatalError(m_chainman.GetNotifications(), state, _("Corrupt block found indicating potential hardware failure."));
         }
         LogError("%s: Consensus::CheckBlock: %s\n", __func__, state.ToString());
         return false;
@@ -3077,7 +3077,7 @@ bool Chainstate::FlushStateToDisk(
         if (fDoFullFlush || fPeriodicWrite) {
             // Ensure we can write block index
             if (!CheckDiskSpace(m_blockman.m_opts.blocks_dir)) {
-                return FatalError(m_chainman.GetNotifications(), state, "Disk space is too low!", _("Disk space is too low!"));
+                return FatalError(m_chainman.GetNotifications(), state, _("Disk space is too low!"));
             }
             {
                 LOG_TIME_MILLIS_WITH_CATEGORY("write block and undo data to disk", BCLog::BENCH);
@@ -3101,7 +3101,7 @@ bool Chainstate::FlushStateToDisk(
                     }
                 }
                 if (!m_blockman.WriteBlockIndexDB()) {
-                    return FatalError(m_chainman.GetNotifications(), state, "Failed to write to block index database");
+                    return FatalError(m_chainman.GetNotifications(), state, _("Failed to write to block index database."));
                 }
 
                 // This should be done inside WriteBatchSync, but CBlockIndex is const there
@@ -3159,11 +3159,11 @@ bool Chainstate::FlushStateToDisk(
             // an overestimation, as most will delete an existing entry or
             // overwrite one. Still, use a conservative safety factor of 2.
             if (!CheckDiskSpace(m_chainman.m_options.datadir, 48 * 2 * 2 * CoinsTip().GetCacheSize())) {
-                return FatalError(m_chainman.GetNotifications(), state, "Disk space is too low!", _("Disk space is too low!"));
+                return FatalError(m_chainman.GetNotifications(), state, _("Disk space is too low!"));
             }
             // Flush the chainstate (which may refer to block index entries).
             if (!CoinsTip().Flush())
-                return FatalError(m_chainman.GetNotifications(), state, "Failed to write to coin database");
+                return FatalError(m_chainman.GetNotifications(), state, _("Failed to write to coin database."));
             m_last_flush = nNow;
             full_flush_completed = true;
             TRACE5(utxocache, flush,
@@ -3179,7 +3179,7 @@ bool Chainstate::FlushStateToDisk(
         m_chainman.m_options.signals->ChainStateFlushed(this->GetRole(), m_chain.GetLocator());
     }
     } catch (const std::runtime_error& e) {
-        return FatalError(m_chainman.GetNotifications(), state, std::string("System error while flushing: ") + e.what());
+        return FatalError(m_chainman.GetNotifications(), state, strprintf(_("System error while flushing: %s"), e.what()));
     }
     return true;
 }
@@ -3441,7 +3441,7 @@ bool Chainstate::ConnectTip(BlockValidationState& state, CBlockIndex* pindexNew,
     if (!pblock) {
         std::shared_ptr<CBlock> pblockNew = std::make_shared<CBlock>();
         if (!m_blockman.ReadBlockFromDisk(*pblockNew, *pindexNew)) {
-            return FatalError(m_chainman.GetNotifications(), state, "Failed to read block");
+            return FatalError(m_chainman.GetNotifications(), state, _("Failed to read block."));
         }
         pthisBlock = pblockNew;
     } else {
@@ -3642,7 +3642,7 @@ bool Chainstate::ActivateBestChainStep(BlockValidationState& state, CBlockIndex*
             // If we're unable to disconnect a block during normal operation,
             // then that is a failure of our local system -- we should abort
             // rather than stay on a less work chain.
-            FatalError(m_chainman.GetNotifications(), state, "Failed to disconnect block; see debug.log for details");
+            FatalError(m_chainman.GetNotifications(), state, _("Failed to disconnect block."));
             return false;
         }
         fBlocksDisconnected = true;
@@ -4962,7 +4962,7 @@ bool ChainstateManager::AcceptBlock(const std::shared_ptr<const CBlock>& pblock,
         }
         ReceivedBlockTransactions(block, pindex, blockPos);
     } catch (const std::runtime_error& e) {
-        return FatalError(GetNotifications(), state, std::string("System error: ") + e.what());
+        return FatalError(GetNotifications(), state, strprintf(_("System error while saving block to disk: %s"), e.what()));
     }
 
     // TODO: FlushStateToDisk() handles flushing of both block and chainstate
@@ -5646,7 +5646,7 @@ void ChainstateManager::LoadExternalBlockFile(
             }
         }
     } catch (const std::runtime_error& e) {
-        GetNotifications().fatalError(std::string("System error: ") + e.what());
+        GetNotifications().fatalError(strprintf(_("System error while loading external block file: %s"), e.what()));
     }
     LogPrintf("Loaded %i blocks from external file in %dms\n", nLoaded, Ticks<std::chrono::milliseconds>(SteadyClock::now() - start));
 }
@@ -6150,8 +6150,8 @@ bool ChainstateManager::ActivateSnapshot(
             snapshot_chainstate.reset();
             bool removed = DeleteCoinsDBFromDisk(*snapshot_datadir, /*is_snapshot=*/true);
             if (!removed) {
-                GetNotifications().fatalError(strprintf("Failed to remove snapshot chainstate dir (%s). "
-                    "Manually remove it before restarting.\n", fs::PathToString(*snapshot_datadir)));
+                GetNotifications().fatalError(strprintf(_("Failed to remove snapshot chainstate dir (%s). "
+                    "Manually remove it before restarting.\n"), fs::PathToString(*snapshot_datadir)));
             }
         }
         return false;
@@ -6490,7 +6490,7 @@ SnapshotCompletionResult ChainstateManager::MaybeCompleteSnapshotValidation()
             user_error = strprintf(Untranslated("%s\n%s"), user_error, util::ErrorString(rename_result));
         }
 
-        GetNotifications().fatalError(user_error.original, user_error);
+        GetNotifications().fatalError(user_error);
     };
 
     if (index_new.GetBlockHash() != snapshot_blockhash) {
@@ -6831,9 +6831,9 @@ bool ChainstateManager::ValidatedSnapshotCleanup()
                                    const fs::filesystem_error& err) {
         LogPrintf("Error renaming path (%s) -> (%s): %s\n",
                   fs::PathToString(p_old), fs::PathToString(p_new), err.what());
-        GetNotifications().fatalError(strprintf(
+        GetNotifications().fatalError(strprintf(_(
             "Rename of '%s' -> '%s' failed. "
-            "Cannot clean up the background chainstate leveldb directory.",
+            "Cannot clean up the background chainstate leveldb directory."),
             fs::PathToString(p_old), fs::PathToString(p_new)));
     };
 
