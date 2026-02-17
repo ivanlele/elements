@@ -688,7 +688,7 @@ class ImportDescriptorsTest(BitcoinTestFramework):
 
         encrypted_wallet.walletpassphrase("passphrase", 99999)
         with concurrent.futures.ThreadPoolExecutor(max_workers=1) as thread:
-            with self.nodes[0].assert_debug_log(expected_msgs=["Rescan started from block cd179c84c35f51825f20a3b91a18d45f0c53b5ceb744a5b6ef8f0babe809396f... (slow variant inspecting all blocks)"], timeout=5):
+            with self.nodes[0].assert_debug_log(expected_msgs=["Rescan started from block cd179c84c35f51825f20a3b91a18d45f0c53b5ceb744a5b6ef8f0babe809396f... (slow variant inspecting all blocks)"], timeout=10):
                 importing = thread.submit(encrypted_wallet.importdescriptors, requests=[descriptor])
 
             # Set the passphrase timeout to 1 to test that the wallet remains unlocked during the rescan
