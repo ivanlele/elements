@@ -2,15 +2,8 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#if defined(HAVE_CONFIG_H)
-#include <config/bitcoin-config.h>
-#endif
-
 #include <bench/bench.h>
 #include <key.h>
-#if defined(HAVE_CONSENSUS_LIB)
-#include <script/bitcoinconsensus.h>
-#endif
 #include <script/script.h>
 #include <script/interpreter.h>
 #include <streams.h>
@@ -64,20 +57,6 @@ static void VerifyScriptBench(benchmark::Bench& bench)
             &err);
         assert(err == SCRIPT_ERR_OK);
         assert(success);
-
-#if defined(HAVE_CONSENSUS_LIB)
-        DataStream stream;
-        stream << TX_WITH_WITNESS(txSpend);
-        DataStream streamVal;
-        streamVal << txCredit.vout[0].nValue;
-        int csuccess = bitcoinconsensus_verify_script_with_amount(
-            nullptr,
-            txCredit.vout[0].scriptPubKey.data(),
-            txCredit.vout[0].scriptPubKey.size(),
-            (const unsigned char*)&streamVal[0], streamVal.size(),
-            (const unsigned char*)stream.data(), stream.size(), 0, flags, nullptr);
-        assert(csuccess == 1);
-#endif
     });
     ECC_Stop();
 }
