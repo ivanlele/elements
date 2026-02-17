@@ -1414,7 +1414,7 @@ static RPCHelpMan consumecompactsketch()
     const NodeContext& node = EnsureAnyNodeContext(request.context);
     LOCK(node.mempool->cs);
     PartiallyDownloadedBlock partialBlock(node.mempool.get());
-    const std::vector<std::pair<uint256, CTransactionRef>> dummy;
+    const std::vector<CTransactionRef> dummy;
     ReadStatus status = partialBlock.InitData(cmpctblock, dummy);
     if (status != READ_STATUS_OK) {
         throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "Compact block decode failed");
@@ -1548,9 +1548,9 @@ static RPCHelpMan finalizecompactblock()
     PartiallyDownloadedBlock partialBlock(&dummy_pool);
 
     // "Extra" list is really our combined list that will be put into place using InitData
-    std::vector<std::pair<uint256, CTransactionRef>> extra_txn(found.size());
+    std::vector<CTransactionRef> extra_txn(found.size());
     for (const auto& found_tx : found) {
-        extra_txn.emplace_back(found_tx->GetWitnessHash(), found_tx);
+        extra_txn.emplace_back(found_tx);
     }
     std::shared_ptr<CBlock> pblock = std::make_shared<CBlock>();
     if (partialBlock.InitData(cmpctblock, extra_txn) != READ_STATUS_OK) {
