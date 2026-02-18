@@ -134,7 +134,7 @@ void WalletView::processNewTransaction(const QModelIndex& parent, int start, int
         return;
 
     QString date = ttm->index(start, TransactionTableModel::Date, parent).data().toString();
-    QString assetamount_str = ttm->index(start, TransactionTableModel::Amount, parent).data().toString();
+    QString assetamount_str = ttm->index(start, TransactionTableModel::Amount, parent).data(Qt::EditRole).toString();
     QString type = ttm->index(start, TransactionTableModel::Type, parent).data().toString();
     QModelIndex index = ttm->index(start, 0, parent);
     QString address = ttm->data(index, TransactionTableModel::AddressRole).toString();
