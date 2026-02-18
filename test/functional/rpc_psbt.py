@@ -1361,7 +1361,7 @@ class PSBTTest(BitcoinTestFramework):
             # assert_equal(comb_psbt, psbt)
 
         self.log.info("Test walletprocesspsbt raises if an invalid sighashtype is passed")
-        assert_raises_rpc_error(-8, "all is not a valid sighash parameter.", self.nodes[0].walletprocesspsbt, psbt, sighashtype="all")
+        assert_raises_rpc_error(-8, "'all' is not a valid sighash parameter.", self.nodes[0].walletprocesspsbt, psbt, sighashtype="all")
 
         # ELEMENTS TODO: : v2 not deserialisable with PSBT_GLOBAL_UNSIGNED_TX, version 0 not allowed
         # self.log.info("Test decoding PSBT with per-input preimage types")
@@ -1471,7 +1471,7 @@ class PSBTTest(BitcoinTestFramework):
             self.nodes[2].sendrawtransaction(processed_psbt['hex'])
 
             self.log.info("Test descriptorprocesspsbt raises if an invalid sighashtype is passed")
-            assert_raises_rpc_error(-8, "all is not a valid sighash parameter.", self.nodes[2].descriptorprocesspsbt, psbt, [descriptor], sighashtype="all")
+            assert_raises_rpc_error(-8, "'all' is not a valid sighash parameter.", self.nodes[2].descriptorprocesspsbt, psbt, [descriptor], sighashtype="all")
 
 if __name__ == '__main__':
     PSBTTest().main()
