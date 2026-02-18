@@ -16,7 +16,6 @@
 #include <banman.h>
 #include <chainparams.h>
 #include <common/system.h>
-#include <common/url.h>
 #include <consensus/consensus.h>
 #include <consensus/params.h>
 #include <consensus/validation.h>
@@ -85,7 +84,6 @@ using node::RegenerateCommitments;
 using node::VerifyLoadedChainstate;
 
 const std::function<std::string(const char*)> G_TRANSLATION_FUN = nullptr;
-UrlDecodeFn* const URL_DECODE = nullptr;
 
 /** Random context to get unique temp data dirs. Separate from g_insecure_rand_ctx, which can be seeded from a const env var */
 static FastRandomContext g_insecure_rand_ctx_temp_path;
