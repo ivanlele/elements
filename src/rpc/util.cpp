@@ -26,6 +26,8 @@
 #include <policy/policy.h>
 #include <assetsdir.h>
 
+#include <algorithm>
+#include <iterator>
 #include <string_view>
 #include <tuple>
 
@@ -737,6 +739,16 @@ std::vector<std::pair<std::string, bool>> RPCHelpMan::GetArgNames() const
         ret.emplace_back(arg.m_names, /*named_only=*/false);
     }
     return ret;
+}
+
+size_t RPCHelpMan::GetParamIndex(std::string_view key) const
+{
+    auto it{std::find_if(
+        m_args.begin(), m_args.end(), [&key](const auto& arg) { return arg.GetName() == key;}
+    )};
+
+    CHECK_NONFATAL(it != m_args.end());  // TODO: ideally this is checked at compile time
+    return std::distance(m_args.begin(), it);
 }
 
 std::string RPCHelpMan::ToString() const
