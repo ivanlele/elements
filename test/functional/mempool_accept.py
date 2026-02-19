@@ -13,7 +13,7 @@ from test_framework.messages import (
     MAX_BIP125_RBF_SEQUENCE,
     COIN,
     COutPoint,
-    # CTransaction,
+    CTransaction,
     CTxIn,
     # CTxInWitness,
     CTxOut,
@@ -28,7 +28,9 @@ from test_framework.script import (
     OP_0,
     OP_HASH160,
     OP_RETURN,
-    # OP_TRUE,
+    OP_TRUE,
+    SIGHASH_ALL,
+    sign_input_legacy,
 )
 from test_framework.script_util import (
     # DUMMY_MIN_OP_RETURN_SCRIPT,
@@ -36,7 +38,7 @@ from test_framework.script_util import (
     # MIN_PADDING,
     MIN_STANDARD_TX_NONWITNESS_SIZE,
     script_to_p2sh_script,
-    # script_to_p2wsh_script,
+    script_to_p2wsh_script,
 )
 from test_framework.util import (
     assert_equal,
@@ -375,6 +377,26 @@ class MempoolAcceptanceTest(BitcoinTestFramework):
         # ELEMENTS: not possible to create a valid transaction of 64 bytes to test "tx-size-small" policy
         # CVE-2017-12842 does not affect elements transactions
         assert_equal(MIN_STANDARD_TX_NONWITNESS_SIZE - 1, 64)
+
+        self.log.info('Spending a confirmed bare multisig is okay')
+        address = self.wallet.get_address()
+        tx = tx_from_hex(raw_tx_reference)
+        privkey, pubkey = generate_keypair()
+        tx.vout[0].scriptPubKey = keys_to_multisig_script([pubkey] * 3, k=1)  # Some bare multisig script (1-of-3)
+        tx.rehash()
+        self.generateblock(node, address, [tx.serialize().hex()])
+        tx_spend = CTransaction()
+        tx_spend.vin.append(CTxIn(COutPoint(tx.sha256, 0), b""))
+        tx_spend.vout.append(CTxOut(tx.vout[0].nValue.getAmount() - int(fee*COIN), script_to_p2wsh_script(CScript([OP_TRUE]))))
+        tx_spend.vout.append(CTxOut(int(fee*COIN), b''))
+        tx_spend.rehash()
+        sign_input_legacy(tx_spend, 0, tx.vout[0].scriptPubKey, privkey, sighash_type=SIGHASH_ALL)
+        tx_spend.vin[0].scriptSig = bytes(CScript([OP_0])) + tx_spend.vin[0].scriptSig
+        self.check_mempool_result(
+            result_expected=[{'txid': tx_spend.rehash(), 'allowed': True, 'vsize': tx_spend.get_vsize(), 'fees': { 'base': Decimal('0.00000700')}}],
+            rawtxs=[tx_spend.serialize().hex()],
+            maxfeerate=0,
+        )
 
 if __name__ == '__main__':
     MempoolAcceptanceTest().main()
