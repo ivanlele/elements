@@ -2954,7 +2954,7 @@ util::Result<CTxDestination> CWallet::GetNewDestination(const OutputType type, c
             auto dest = *op_dest;
             CPubKey blinding_pubkey = GetBlindingPubKey(GetScriptForDestination(dest));
             std::visit(SetBlindingPubKeyVisitor(blinding_pubkey), dest);
-            op_dest = dest;
+            *op_dest = dest;
         }
         SetAddressBook(*op_dest, label, AddressPurpose::RECEIVE);
     }

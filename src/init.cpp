@@ -1042,10 +1042,8 @@ bool AppInitParameterInteraction(const ArgsManager& args)
         InitWarning(strprintf(_("Reducing -maxconnections from %d to %d, because of system limitations."), nUserMaxConnections, nMaxConnections));
 
     // ********************************************************* Step 3: parameter-to-internal-flags
-    auto result = init::SetLoggingCategories(args);
-    if (!result) return InitError(util::ErrorString(result));
-    result = init::SetLoggingLevel(args);
-    if (!result) return InitError(util::ErrorString(result));
+    if (auto result{init::SetLoggingCategories(args)}; !result) return InitError(util::ErrorString(result));
+    if (auto result{init::SetLoggingLevel(args)}; !result) return InitError(util::ErrorString(result));
 
     // ELEMENTS: epoch length and trim headers
     uint32_t epoch_length = chainparams.GetConsensus().dynamic_epoch_length;

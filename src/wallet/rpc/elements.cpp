@@ -1558,15 +1558,13 @@ RPCHelpMan issueasset()
     // Generate a new key that is added to wallet
     bilingual_str error;
     CPubKey newKey;
-    util::Result<CTxDestination> asset_dest{util::Error{}};
-    util::Result<CTxDestination> token_dest{util::Error{}};
     CScript asset_script;
     CScript token_script;
     CPubKey asset_dest_blindpub;
     CPubKey token_dest_blindpub;
 
     if (nAmount > 0) {
-        asset_dest = pwallet->GetNewDestination(OutputType::BECH32, "");
+        auto asset_dest = pwallet->GetNewDestination(OutputType::BECH32, "");
         if (!asset_dest) {
             throw JSONRPCError(RPC_WALLET_KEYPOOL_RAN_OUT, util::ErrorString(asset_dest).original);
         }
@@ -1574,7 +1572,7 @@ RPCHelpMan issueasset()
         asset_dest_blindpub = pwallet->GetBlindingPubKey(GetScriptForDestination(*asset_dest));
     }
     if (nTokens > 0) {
-        token_dest = pwallet->GetNewDestination(OutputType::BECH32, "");
+        auto token_dest = pwallet->GetNewDestination(OutputType::BECH32, "");
         if (!token_dest) {
             throw JSONRPCError(RPC_WALLET_KEYPOOL_RAN_OUT, util::ErrorString(token_dest).original);
         }
