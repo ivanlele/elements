@@ -48,7 +48,6 @@
 #include <script/script.h>
 #include <script/sigcache.h>
 #include <signet.h>
-#include <timedata.h>
 #include <tinyformat.h>
 #include <txdb.h>
 #include <txmempool.h>

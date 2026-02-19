@@ -21,7 +21,7 @@ class ProgressTest(BitcoinTestFramework):
     def set_test_params(self):
         self.setup_clean_chain = True
         self.num_nodes = 2
-        self.extra_args = [["-debug", "-con_npowtargetspacing=1", "-maxtimeadjustment=0"]] * self.num_nodes
+        self.extra_args = [["-debug", "-con_npowtargetspacing=1"]] * self.num_nodes
 
     def add_options(self, parser):
         self.add_wallet_options(parser)

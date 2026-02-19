@@ -19,7 +19,6 @@
 #include <script/generic.hpp>
 #include <script/pegins.h>
 #include <secp256k1.h>
-#include <timedata.h>
 #include <util/signalinterrupt.h>
 #include <util/moneystr.h>
 #include <wallet/coincontrol.h>

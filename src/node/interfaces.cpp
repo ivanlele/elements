@@ -41,7 +41,6 @@
 #include <rpc/server.h>
 #include <support/allocators/secure.h>
 #include <sync.h>
-#include <timedata.h>
 #include <txmempool.h>
 #include <uint256.h>
 #include <univalue.h>
