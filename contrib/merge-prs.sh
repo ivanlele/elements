@@ -25,13 +25,13 @@ WORKTREE="/home/ivan/blockstream/elements-worktree"
 
 # Set your parallellism during build/test. You probably want as many cores as possible.
 # Parallel functional tests can somewhat exceed your core count, depends on the build machine CPU/RAM.
-PARALLEL_BUILD=13  # passed to make -j
-PARALLEL_TEST=26  # passed to test_runner.py --jobs
+PARALLEL_BUILD=15  # passed to make -j
+PARALLEL_TEST=30  # passed to test_runner.py --jobs
 PARALLEL_FUZZ=12  # passed to test_runner.py -j when fuzzing
 
 # Setup a ccache dir if necessary.
 export CCACHE_DIR="/tmp/ccache"
-export CCACHE_MAXSIZE="20G"
+export CCACHE_MAXSIZE="10G"
 
 # Set and export a WEBHOOK environment variable to a Discord webhook URL outside of this script to get notifications of progress and failures.
 
