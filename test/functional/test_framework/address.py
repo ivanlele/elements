@@ -46,7 +46,7 @@ class AddressType(enum.Enum):
 b58chars = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
 
 
-def create_deterministic_address_bcrt1_p2tr_op_true(hrp="ert"):
+def create_deterministic_address_bcrt1_p2tr_op_true(hrp="ert", explicit_internal_key=None):
     """
     Generates a deterministic bech32m address (segwit v1 output) that
     can be spent with a witness stack of OP_TRUE and the control block
@@ -54,12 +54,13 @@ def create_deterministic_address_bcrt1_p2tr_op_true(hrp="ert"):
 
     Returns a tuple with the generated address and the internal key.
     """
-    internal_key = (2).to_bytes(32, 'big') # ELEMENTS: the given internal key from upstream failed to verify
+    internal_key = explicit_internal_key or (2).to_bytes(32, 'big') # ELEMENTS: the given internal key from upstream failed to verify
     address = output_key_to_p2tr(hrp, taproot_construct(internal_key, [(None, CScript([OP_TRUE]))]).output_pubkey)
-    if hrp == "ert":
-        assert_equal(address, 'ert1pxaxh5xm2p349fg5wqstrreat4atm00ktumm6q4vfu960ls09265sf37hcj')
-    if hrp == "bcrt":
-        assert_equal(address, 'bcrt1pxaxh5xm2p349fg5wqstrreat4atm00ktumm6q4vfu960ls09265sczkf3k')
+    if explicit_internal_key is None:
+        if hrp == "ert":
+            assert_equal(address, 'ert1pxaxh5xm2p349fg5wqstrreat4atm00ktumm6q4vfu960ls09265sf37hcj')
+        if hrp == "bcrt":
+            assert_equal(address, 'bcrt1pxaxh5xm2p349fg5wqstrreat4atm00ktumm6q4vfu960ls09265sczkf3k')
     return (address, internal_key)
 
 
