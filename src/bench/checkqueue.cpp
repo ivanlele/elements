@@ -25,7 +25,7 @@ static void CCheckQueueSpeedPrevectorJob(benchmark::Bench& bench)
     // We shouldn't ever be running with the checkqueue on a single core machine.
     if (GetNumCores() <= 1) return;
 
-    ECC_Start();
+    ECC_Context ecc_context{};
 
     struct PrevectorJob {
         prevector<PREVECTOR_SIZE, uint8_t> p;
@@ -68,7 +68,5 @@ static void CCheckQueueSpeedPrevectorJob(benchmark::Bench& bench)
     for (auto& vChecks : vBatches)
         for (size_t x = 0; x < BATCH_SIZE; ++x)
             delete vChecks[x];
-
-    ECC_Stop();
 }
 BENCHMARK(CCheckQueueSpeedPrevectorJob, benchmark::PriorityLevel::HIGH);
