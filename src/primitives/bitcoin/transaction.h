@@ -292,7 +292,7 @@ public:
 
     template <typename Stream>
     inline void Serialize(Stream& s) const {
-        Sidechain::Bitcoin::SerializeTransaction(*this, s, s.GetParams());
+        Sidechain::Bitcoin::SerializeTransaction(*this, s, s.template GetParams<TransactionSerParams>());
     }
 
     /** This deserializing constructor is provided instead of an Unserialize method.
@@ -300,7 +300,7 @@ public:
     template <typename Stream>
     CTransaction(deserialize_type, const TransactionSerParams& params, Stream& s) : CTransaction(CMutableTransaction(deserialize, params, s)) {}
     template <typename Stream>
-    CTransaction(deserialize_type, ParamsStream<TransactionSerParams,Stream>& s) : CTransaction(CMutableTransaction(deserialize, s)) {}
+    CTransaction(deserialize_type, Stream& s) : CTransaction(CMutableTransaction(deserialize, s)) {}
 
     bool IsNull() const {
         return vin.empty() && vout.empty();
@@ -360,13 +360,13 @@ struct CMutableTransaction
 
     template <typename Stream>
     inline void Serialize(Stream& s) const {
-        Sidechain::Bitcoin::SerializeTransaction(*this, s, s.GetParams());
+        Sidechain::Bitcoin::SerializeTransaction(*this, s, s.template GetParams<TransactionSerParams>());
     }
 
 
     template <typename Stream>
     inline void Unserialize(Stream& s) {
-        Sidechain::Bitcoin::UnserializeTransaction(*this, s, s.GetParams());
+        Sidechain::Bitcoin::UnserializeTransaction(*this, s, s.template GetParams<TransactionSerParams>());
     }
 
     template <typename Stream>
