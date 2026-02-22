@@ -80,8 +80,6 @@ static const unsigned int MAX_BLOCKFILE_SIZE = 0x8000000; // 128 MiB
 /** Size of header written by WriteBlockToDisk before a serialized CBlock */
 static constexpr size_t BLOCK_SERIALIZATION_HEADER_SIZE = std::tuple_size_v<MessageStartChars> + sizeof(unsigned int);
 
-extern std::atomic_bool fReindex;
-
 // ELEMENTS
 /** True if we're running in -trim_headers mode. */
 extern bool fTrimHeaders;
@@ -283,10 +281,18 @@ public:
     explicit BlockManager(const util::SignalInterrupt& interrupt, Options opts)
         : m_prune_mode{opts.prune_target > 0},
           m_opts{std::move(opts)},
-          m_interrupt{interrupt} {};
+          m_interrupt{interrupt},
+          m_reindexing{m_opts.reindex} {};
 
     const util::SignalInterrupt& m_interrupt;
     std::atomic<bool> m_importing{false};
+
+    /**
+     * Tracks if a reindex is currently in progress. Set to true when a reindex
+     * is requested and false when reindexing completes. Its value is persisted
+     * in the BlockTreeDB across restarts.
+     */
+    std::atomic_bool m_reindexing;
 
     BlockMap m_block_index GUARDED_BY(cs_main);
 
@@ -367,7 +373,7 @@ public:
     [[nodiscard]] uint64_t GetPruneTarget() const { return m_opts.prune_target; }
     static constexpr auto PRUNE_TARGET_MANUAL{std::numeric_limits<uint64_t>::max()};
 
-    [[nodiscard]] bool LoadingBlocks() const { return m_importing || fReindex; }
+    [[nodiscard]] bool LoadingBlocks() const { return m_importing || m_reindexing; }
 
     /** Calculate the amount of disk space the block & undo files currently use */
     uint64_t CalculateCurrentUsage();
