@@ -219,6 +219,8 @@ BASE_SCRIPTS = [
     'mempool_resurrect.py',
     'wallet_txn_doublespend.py --mineblock',
     'tool_wallet.py --legacy-wallet',
+    'tool_wallet.py --legacy-wallet --bdbro',
+    'tool_wallet.py --legacy-wallet --bdbro --swap-bdb-endian',
     'tool_wallet.py --descriptors',
     'wallet_transactiontime_rescan.py --descriptors',
     'wallet_transactiontime_rescan.py --legacy-wallet',
