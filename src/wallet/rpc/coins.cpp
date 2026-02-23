@@ -470,7 +470,7 @@ RPCHelpMan listlockunspent()
 
         o.pushKV("txid", outpt.hash.GetHex());
         o.pushKV("vout", (int)outpt.n);
-        ret.push_back(o);
+        ret.push_back(std::move(o));
     }
 
     return ret;
@@ -559,7 +559,7 @@ RPCHelpMan getbalances()
             const auto full_bal = GetBalance(wallet, 0, false);
             balances_mine.pushKV("used", AmountMapToUniv(full_bal.m_mine_trusted + full_bal.m_mine_untrusted_pending - bal.m_mine_trusted - bal.m_mine_untrusted_pending, ""));
         }
-        balances.pushKV("mine", balances_mine);
+        balances.pushKV("mine", std::move(balances_mine));
     }
     auto spk_man = wallet.GetLegacyScriptPubKeyMan();
     if (spk_man && spk_man->HaveWatchOnly()) {
@@ -567,7 +567,7 @@ RPCHelpMan getbalances()
         balances_watchonly.pushKV("trusted", AmountMapToUniv(bal.m_watchonly_trusted, ""));
         balances_watchonly.pushKV("untrusted_pending", AmountMapToUniv(bal.m_watchonly_untrusted_pending, ""));
         balances_watchonly.pushKV("immature", AmountMapToUniv(bal.m_watchonly_immature, ""));
-        balances.pushKV("watchonly", balances_watchonly);
+        balances.pushKV("watchonly", std::move(balances_watchonly));
     }
 
     AppendLastProcessedBlock(balances, wallet);
@@ -846,7 +846,7 @@ RPCHelpMan listunspent()
         PushParentDescriptors(*pwallet, scriptPubKey, entry);
         if (avoid_reuse) entry.pushKV("reused", reused);
         entry.pushKV("safe", out.safe);
-        results.push_back(entry);
+        results.push_back(std::move(entry));
     }
 
     return results;

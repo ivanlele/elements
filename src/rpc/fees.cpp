@@ -88,7 +88,7 @@ static RPCHelpMan estimatesmartfee()
                 result.pushKV("feerate", ValueFromAmount(feeRate.GetFeePerK()));
             } else {
                 errors.push_back("Insufficient data or no feerate found");
-                result.pushKV("errors", errors);
+                result.pushKV("errors", std::move(errors));
             }
             result.pushKV("blocks", feeCalc.returnedTarget);
             return result;

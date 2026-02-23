@@ -345,7 +345,7 @@ void TxToUniv(const CTransaction& tx, const uint256& block_hash, UniValue& entry
 
         vin.push_back(in);
     }
-    entry.pushKV("vin", vin);
+    entry.pushKV("vin", std::move(vin));
 
     CAmountMap fee_map{};
     UniValue vout(UniValue::VARR);
@@ -402,7 +402,7 @@ void TxToUniv(const CTransaction& tx, const uint256& block_hash, UniValue& entry
         out.pushKV("scriptPubKey", o);
         vout.push_back(out);
     }
-    entry.pushKV("vout", vout);
+    entry.pushKV("vout", std::move(vout));
 
     // ELEMENTS: add fee map rather than single fee. Unlike other areas of the RPC,
     //  we do not look up labels here and will always use the asset hex (contrast

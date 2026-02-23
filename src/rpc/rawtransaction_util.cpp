@@ -453,11 +453,11 @@ static void TxInErrorToJSON(const CTxIn& txin, const CTxInWitness& txinwit, UniV
     for (unsigned int i = 0; i < txinwit.scriptWitness.stack.size(); i++) {
         witness.push_back(HexStr(txinwit.scriptWitness.stack[i]));
     }
-    entry.pushKV("witness", witness);
+    entry.pushKV("witness", std::move(witness));
     entry.pushKV("scriptSig", HexStr(txin.scriptSig));
     entry.pushKV("sequence", (uint64_t)txin.nSequence);
     entry.pushKV("error", strMessage);
-    vErrorsRet.push_back(entry);
+    vErrorsRet.push_back(std::move(entry));
 }
 
 void ParsePrevouts(const UniValue& prevTxsUnival, FillableSigningProvider* keystore, std::map<COutPoint, Coin>& coins)
@@ -638,7 +638,7 @@ void SignTransactionResultToJSON(CMutableTransaction& mtx, bool complete, const 
         if (result.exists("errors")) {
             vErrors.push_backV(result["errors"].getValues());
         }
-        result.pushKV("errors", vErrors);
+        result.pushKV("errors", std::move(vErrors));
     }
     if (immature_pegin) {
         result.pushKV("warning", "Possibly immature peg-in input(s) detected, signed anyways.");

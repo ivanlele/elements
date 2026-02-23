@@ -655,7 +655,7 @@ UniValue RPCHelpMan::HandleRequest(const JSONRPCRequest& request) const
                 mismatch.setNull();
                 break;
             }
-            mismatch.push_back(match);
+            mismatch.push_back(std::move(match));
         }
         if (!mismatch.isNull()) {
             std::string explain{
@@ -828,7 +828,7 @@ UniValue RPCHelpMan::GetArgMap() const
         map.push_back(arg_name);
         map.push_back(type == RPCArg::Type::STR ||
                       type == RPCArg::Type::STR_HEX);
-        arr.push_back(map);
+        arr.push_back(std::move(map));
     };
 
     for (int i{0}; i < int(m_args.size()); ++i) {
