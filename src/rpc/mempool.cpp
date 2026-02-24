@@ -83,7 +83,7 @@ static RPCHelpMan sendrawtransaction()
 
             CTransactionRef tx(MakeTransactionRef(std::move(mtx)));
 
-            const CFeeRate max_raw_tx_fee_rate{ParseFeeRate(self.Arg<UniValue>(1))};
+            const CFeeRate max_raw_tx_fee_rate{ParseFeeRate(self.Arg<UniValue>("maxfeerate"))};
 
     for (const auto& out : tx->vout) {
         // If we have a nonce, it could be a smuggled pubkey, or it could be a
@@ -173,7 +173,7 @@ static RPCHelpMan testmempoolaccept()
                                 "Array must contain between 1 and " + ToString(MAX_PACKAGE_COUNT) + " transactions.");
             }
 
-            const CFeeRate max_raw_tx_fee_rate{ParseFeeRate(self.Arg<UniValue>(1))};
+            const CFeeRate max_raw_tx_fee_rate{ParseFeeRate(self.Arg<UniValue>("maxfeerate"))};
 
             std::vector<CTransactionRef> txns;
             txns.reserve(raw_transactions.size());
@@ -884,7 +884,7 @@ static RPCHelpMan submitpackage()
             }
 
             // Fee check needs to be run with chainstate and package context
-            const CFeeRate max_raw_tx_fee_rate = ParseFeeRate(self.Arg<UniValue>(1));
+            const CFeeRate max_raw_tx_fee_rate{ParseFeeRate(self.Arg<UniValue>("maxfeerate"))};
             std::optional<CFeeRate> client_maxfeerate{max_raw_tx_fee_rate};
             // 0-value is special; it's mapped to no sanity check
             if (max_raw_tx_fee_rate == CFeeRate(0)) {
