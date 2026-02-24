@@ -1740,3 +1740,46 @@ std::unique_ptr<const CChainParams> CChainParams::TestNet()
 {
     return std::make_unique<const CTestNetParams>();
 }
+
+std::vector<int> CChainParams::GetAvailableSnapshotHeights() const
+{
+    std::vector<int> heights;
+    heights.reserve(m_assumeutxo_data.size());
+
+    for (const auto& data : m_assumeutxo_data) {
+        heights.emplace_back(data.height);
+    }
+    return heights;
+}
+
+std::optional<ChainType> GetNetworkForMagic(MessageStartChars& message)
+{
+    const auto mainnet_msg = CChainParams::Main()->MessageStart();
+    const auto testnet_msg = CChainParams::TestNet()->MessageStart();
+    const auto regtest_msg = CChainParams::RegTest({})->MessageStart();
+    const auto signet_msg = CChainParams::SigNet({})->MessageStart();
+    // Elements
+    const auto liquid1_msg = CChainParams::LiquidV1({})->MessageStart();
+    const auto liquid1test_msg = CChainParams::LiquidV1Test({})->MessageStart();
+    const auto liquidtestnet_msg = CChainParams::LiquidTestNet({}, {}, {})->MessageStart();
+    const auto custom_msg = CChainParams::Custom(ChainTypeMetaFrom(ChainType::CUSTOM), {}, {})->MessageStart();
+
+    if (std::equal(message.begin(), message.end(), mainnet_msg.data())) {
+        return ChainType::MAIN;
+    } else if (std::equal(message.begin(), message.end(), testnet_msg.data())) {
+        return ChainType::TESTNET;
+    } else if (std::equal(message.begin(), message.end(), regtest_msg.data())) {
+        return ChainType::REGTEST;
+    } else if (std::equal(message.begin(), message.end(), signet_msg.data())) {
+        return ChainType::SIGNET;
+    } else if (std::equal(message.begin(), message.end(), liquid1_msg.data())) {
+        return ChainType::LIQUID1;
+    } else if (std::equal(message.begin(), message.end(), liquid1test_msg.data())) {
+        return ChainType::LIQUID1TEST;
+    } else if (std::equal(message.begin(), message.end(), liquidtestnet_msg.data())) {
+        return ChainType::LIQUIDTESTNET;
+    } else if (std::equal(message.begin(), message.end(), custom_msg.data())) {
+        return ChainType::CUSTOM;
+    }
+    return std::nullopt;
+}
