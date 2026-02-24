@@ -2971,7 +2971,7 @@ UniValue CreateUTXOSnapshot(
         tip->nHeight, tip->GetBlockHash().ToString(),
         fs::PathToString(path), fs::PathToString(temppath)));
 
-    SnapshotMetadata metadata{tip->GetBlockHash(), tip->nHeight, maybe_stats->coins_count};
+    SnapshotMetadata metadata{chainstate.m_chainman.GetParams().MessageStart(), tip->GetBlockHash(), tip->nHeight, maybe_stats->coins_count};
 
     afile << metadata;
 
@@ -3083,7 +3083,7 @@ static RPCHelpMan loadtxoutset()
             "Couldn't open file " + path.utf8string() + " for reading.");
     }
 
-    SnapshotMetadata metadata;
+    SnapshotMetadata metadata{chainman.GetParams().MessageStart()};
     try {
         afile >> metadata;
     } catch (const std::ios_base::failure& e) {

@@ -102,7 +102,7 @@ class AssumeutxoTest(BitcoinTestFramework):
             with open(bad_snapshot_path, 'wb') as f:
                 f.write(valid_snapshot_contents[:7] + magic.to_bytes(4, 'big') + valid_snapshot_contents[11:])
             if real:
-                assert_raises_rpc_error(parsing_error_code, f"Unable to parse metadata: The network of the snapshot ({name}) does not match the network of this node (elementsregtest).", self.nodes[1].loadtxoutset, bad_snapshot_path)
+                assert_raises_rpc_error(parsing_error_code, f"Unable to parse metadata: The network of the snapshot ({name}) does not match the network of this node (custom).: iostream error", self.nodes[1].loadtxoutset, bad_snapshot_path)
             else:
                 assert_raises_rpc_error(parsing_error_code, "Unable to parse metadata: This snapshot has been created for an unrecognized network. This could be a custom signet, a new testnet or possibly caused by data corruption.", self.nodes[1].loadtxoutset, bad_snapshot_path)
 
@@ -132,6 +132,7 @@ class AssumeutxoTest(BitcoinTestFramework):
             # (content, offset, wrong_hash, custom_message)
             [b"\xff" * 32, 0, "fe24331eea3495e16b64f40f2b3c98141dcf197d7141d09ac73564b08df966a8", None],  # wrong outpoint hash
             [(2).to_bytes(1, "little"), 32, None, "bad snapshot format or truncated snapshot after deserializing 1 coins"],  # wrong outpoint hash
+            [b"\xfd\xff\xff", 32, None, "[snapshot] mismatch in coins count in snapshot metadata and actual snapshot data"],  # txid coins count exceeds coins left
             [b"\x01", 33, "462a4ce4edeaa411e3b187e0aae625b81d35b8a113dc3ee2f2534e583a4dcfe4", None],  # wrong outpoint index
             [b"\x81", 34, "1c0631e0459385cf7568e955429697b1b8bf981f44268dc9b4a1758a5dfd116e", None],  # wrong coin code VARINT
             [b"\x80", 34, "ea23396cbe1f91cc5c75cade465df52d37f280bb5aad73a695a36ebfbb32ec01", None],  # another wrong coin code

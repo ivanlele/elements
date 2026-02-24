@@ -246,6 +246,6 @@ protected:
     PeginMinimum pegin_minimum;
 };
 
-std::optional<ChainType> GetNetworkForMagic(MessageStartChars& pchMessageStart);
+std::optional<ChainType> GetNetworkForMagic(const MessageStartChars& pchMessageStart);
 
 #endif // BITCOIN_KERNEL_CHAINPARAMS_H
