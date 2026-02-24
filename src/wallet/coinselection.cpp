@@ -301,7 +301,7 @@ util::Result<SelectionResult> SelectCoinsBnB(std::vector<OutputGroup>& utxo_pool
     for (const size_t& i : best_selection) {
         result.AddInput(utxo_pool.at(i));
     }
-    result.ComputeAndSetWaste(cost_of_change, cost_of_change, CAmount{0});
+    result.RecalculateWaste(cost_of_change, cost_of_change, CAmount{0});
     assert(best_waste == result.GetWaste());
 
     return result;
@@ -1020,60 +1020,6 @@ void OutputGroupTypeMap::Push(const OutputGroup& group, OutputType type, bool in
     }
 }
 
-CAmount SelectionResult::GetSelectionWaste(CAmount change_cost, CAmountMap target_map, bool use_effective_value)
-{
-    // This function should not be called with empty inputs as that would mean the selection failed
-    assert(!m_selected_inputs.empty());
-
-    // create a map of asset -> coins from the inputs set
-    std::map<CAsset, std::set<COutput>> coinset_map;
-    for(const auto& coin_ptr : m_selected_inputs) {
-        auto asset = coin_ptr->asset;
-        auto search = coinset_map.find(asset);
-        if (search != coinset_map.end()) {
-            search->second.insert(*coin_ptr);
-        } else {
-            std::set<COutput> coinset;
-            coinset.insert(*coin_ptr);
-            coinset_map.insert({asset, coinset});
-        }
-    }
-
-    // Calculate and sum the waste for each asset in the map
-
-    // Always consider the cost of spending an input now vs in the future.
-    CAmount waste = 0;
-
-    for (auto it = coinset_map.begin(); it != coinset_map.end(); ++it) {
-        CAmount selected_effective_value = 0;
-        auto asset = it->first;
-        auto coinset = it->second;
-        auto target = target_map.at(asset);
-
-        for (const COutput& coin : coinset) {
-            waste += coin.GetFee() - coin.long_term_fee;
-            selected_effective_value += use_effective_value ? coin.GetEffectiveValue() : coin.value;
-        }
-
-        if (change_cost) {
-            // Consider the cost of making change and spending it in the future
-            // If we aren't making change, the caller should've set change_cost to 0
-            assert(change_cost > 0);
-            waste += change_cost;
-        } else {
-            // When we are not making change (change_cost == 0), consider the excess we are throwing away to fees
-            // ELEMENTS: changed from assert, the selected effective value may not have reached the target yet
-            // since inputs in coinset may not be policy asset (they have 0 effective value)
-            if (selected_effective_value >= target) {
-                waste += selected_effective_value - target;
-            }
-        }
-    }
-
-    waste -= bump_fee_group_discount;
-
-    return waste;
-}
 
 CAmount GenerateChangeTarget(const CAmount payment_value, const CAmount change_fee, FastRandomContext& rng)
 {
@@ -1093,16 +1039,37 @@ void SelectionResult::SetBumpFeeDiscount(const CAmount discount)
     bump_fee_group_discount = discount;
 }
 
-
-void SelectionResult::ComputeAndSetWaste(const CAmount min_viable_change, const CAmount change_cost, const CAmount change_fee)
+void SelectionResult::RecalculateWaste(const CAmount min_viable_change, const CAmount change_cost, const CAmount change_fee)
 {
-    const CAmountMap change = GetChange(min_viable_change, change_fee);
+    // This function should not be called with empty inputs as that would mean the selection failed
+    assert(!m_selected_inputs.empty());
 
-    if (change > CAmountMap{}) {
-        m_waste = GetSelectionWaste(change_cost, m_target, m_use_effective);
-    } else {
-        m_waste = GetSelectionWaste(0, m_target, m_use_effective);
+    // Always consider the cost of spending an input now vs in the future.
+    CAmount waste = 0;
+    for (const auto& coin_ptr : m_selected_inputs) {
+        const COutput& coin = *coin_ptr;
+        waste += coin.GetFee() - coin.long_term_fee;
     }
+    // Bump fee of whole selection may diverge from sum of individual bump fees
+    waste -= bump_fee_group_discount;
+
+    if (GetChange(min_viable_change, change_fee) > CAmountMap{}) {
+        // if we have a minimum viable amount after deducting fees, account for
+        // cost of creating and spending change
+        waste += change_cost;
+    } else {
+        // When we are not making change (GetChange(…) == 0), consider the excess we are throwing away to fees
+        CAmountMap selected_effective_value = m_use_effective ? GetSelectedEffectiveValue() : GetSelectedValue();
+        // ELEMENTS
+        if (selected_effective_value >= m_target) {
+            CAmountMap excess = selected_effective_value - m_target;
+            for (const auto& [asset, amount] : excess) {
+                waste += amount;
+            }
+        }
+    }
+
+    m_waste = waste;
 }
 
 void SelectionResult::SetAlgoCompleted(bool algo_completed)

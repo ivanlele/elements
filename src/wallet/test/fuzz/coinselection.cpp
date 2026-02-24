@@ -273,7 +273,7 @@ FUZZ_TARGET(coinselection)
         CAmountMap map_target{{CAsset(), target}};
         assert(result_srd->GetSelectedValue() >= map_target);
         assert(result_srd->GetChange(CHANGE_LOWER, coin_params.m_change_fee) > CAmountMap{}); // Demonstrate that SRD creates change of at least CHANGE_LOWER
-        result_srd->ComputeAndSetWaste(coin_params.min_viable_change, coin_params.m_cost_of_change, coin_params.m_change_fee);
+        result_srd->RecalculateWaste(coin_params.min_viable_change, coin_params.m_cost_of_change, coin_params.m_change_fee);
         (void)result_srd->GetShuffledInputVector();
         (void)result_srd->GetInputSet();
     }
@@ -283,7 +283,7 @@ FUZZ_TARGET(coinselection)
     if (result_knapsack) {
         CAmountMap map_target{{CAsset(), target}};
         assert(result_knapsack->GetSelectedValue() >= map_target);
-        result_knapsack->ComputeAndSetWaste(coin_params.min_viable_change, coin_params.m_cost_of_change, coin_params.m_change_fee);
+        result_knapsack->RecalculateWaste(coin_params.min_viable_change, coin_params.m_cost_of_change, coin_params.m_change_fee);
         (void)result_knapsack->GetShuffledInputVector();
         (void)result_knapsack->GetInputSet();
     }
