@@ -176,7 +176,7 @@ static RPCHelpMan createmultisig()
     }
 
     // Construct using pay-to-script-hash:
-    FillableSigningProvider keystore;
+    FlatSigningProvider keystore;
     CScript inner;
     const CTxDestination dest = AddAndGetMultisigDestination(required, pubkeys, output_type, keystore, inner);
 

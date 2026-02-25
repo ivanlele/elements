@@ -61,16 +61,18 @@ class SignRawTransactionWithKeyTest(BitcoinTestFramework):
 
     def send_to_address(self, addr, amount):
         input = {"txid": self.nodes[0].getblock(self.block_hash[self.blk_idx])["tx"][0], "vout": 0}
-
+        input["scriptPubKey"] = self.nodes[0].gettxout(input["txid"], input["vout"])["scriptPubKey"]["hex"]
+        input["witnessScript"] = "001471d7b27f71b24f0dc4e8e3969e0d29b17882fb7f"
         # ELEMENTS: explicitly add a fee output
         input_amount = self.nodes[0].gettxout(input["txid"], input["vout"])["value"]
+        input["amount"] = input_amount
         output_amount = Decimal(str(amount))
         fee = input_amount - output_amount
 
         outputs = [{addr: amount}, {'fee': fee}]
         self.blk_idx += 1
         rawtx = self.nodes[0].createrawtransaction([input], outputs)
-        txid = self.nodes[0].sendrawtransaction(self.nodes[0].signrawtransactionwithkey(rawtx, [self.nodes[0].get_deterministic_priv_key().key])["hex"], 0)
+        txid = self.nodes[0].sendrawtransaction(self.nodes[0].signrawtransactionwithkey(rawtx, [self.nodes[0].get_deterministic_priv_key().key],[input])["hex"], 0)
         return txid
 
     def assert_signing_completed_successfully(self, signed_tx):
