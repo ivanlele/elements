@@ -63,9 +63,9 @@ class CScriptOp(int):
         elif len(d) <= 0xff:
             return b'\x4c' + bytes([len(d)]) + d  # OP_PUSHDATA1
         elif len(d) <= 0xffff:
-            return b'\x4d' + struct.pack(b'<H', len(d)) + d  # OP_PUSHDATA2
+            return b'\x4d' + len(d).to_bytes(2, "little") + d  # OP_PUSHDATA2
         elif len(d) <= 0xffffffff:
-            return b'\x4e' + struct.pack(b'<I', len(d)) + d  # OP_PUSHDATA4
+            return b'\x4e' + len(d).to_bytes(4, "little") + d  # OP_PUSHDATA4
         else:
             raise ValueError("Data too long to encode in a PUSHDATA op")
 
@@ -769,14 +769,14 @@ def LegacySignatureMsg(script, txTo, inIdx, hashtype, enable_sighash_rangeproof=
     # sighash serialization is different from non-witness serialization
     # do manual sighash serialization:
     s = b""
-    s += struct.pack("<i", txtmp.nVersion)
+    s += txtmp.nVersion.to_bytes(4, "little", signed=True)
     # ELEMENTS: vin serialization is different from non-witness serialization (pegin/issuance
     #  flags are not set in the sighash)
     s += ser_compact_size(len(txtmp.vin))
     for i in range(len(txtmp.vin)):
         s += txtmp.vin[i].prevout.serialize()
         s += ser_string(txtmp.vin[i].scriptSig)
-        s += struct.pack("<I", txtmp.vin[i].nSequence)
+        s += txtmp.vin[i].nSequence.to_bytes(4, "little")
         if not txtmp.vin[i].assetIssuance.isNull():
             s += txtmp.vin[i].assetIssuance.serialize()
 
@@ -792,10 +792,10 @@ def LegacySignatureMsg(script, txTo, inIdx, hashtype, enable_sighash_rangeproof=
                 s += bytes([0, 0])
     else:
         s += ser_vector(txtmp.vout)
-    s += struct.pack("<I", txtmp.nLockTime)
+    s += txtmp.nLockTime.to_bytes(4, "little")
 
     # add sighash type
-    s += struct.pack(b"<I", hashtype)
+    s += hashtype.to_bytes(4, "little")
 
     return (s, None)
 
@@ -853,7 +853,7 @@ def SegwitV0SignatureMsg(script, txTo, inIdx, hashtype, amount, enable_sighash_r
     if (not (hashtype & SIGHASH_ANYONECANPAY) and (hashtype & 0x1f) != SIGHASH_SINGLE and (hashtype & 0x1f) != SIGHASH_NONE):
         serialize_sequence = bytes()
         for i in txTo.vin:
-            serialize_sequence += struct.pack("<I", i.nSequence)
+            serialize_sequence += i.nSequence.to_bytes(4, "little")
         hashSequence = uint256_from_str(hash256(serialize_sequence))
 
     if not (hashtype & SIGHASH_ANYONECANPAY):
@@ -890,21 +890,21 @@ def SegwitV0SignatureMsg(script, txTo, inIdx, hashtype, amount, enable_sighash_r
             hashRangeproofs = uint256_from_str(hash256(serialize_rangeproofs))
 
     ss = bytes()
-    ss += struct.pack("<i", txTo.nVersion)
+    ss += txTo.nVersion.to_bytes(4, "little", signed=True)
     ss += ser_uint256(hashPrevouts)
     ss += ser_uint256(hashSequence)
     ss += ser_uint256(hashIssuance)
     ss += txTo.vin[inIdx].prevout.serialize()
     ss += ser_string(script)
     ss += amount.serialize()
-    ss += struct.pack("<I", txTo.vin[inIdx].nSequence)
+    ss += txTo.vin[inIdx].nSequence.to_bytes(4, "little")
     if not txTo.vin[inIdx].assetIssuance.isNull():
         ss += txTo.vin[inIdx].assetIssuance.serialize()
     ss += ser_uint256(hashOutputs)
     if enable_sighash_rangeproof and hashtype & SIGHASH_RANGEPROOF:
         ss += ser_uint256(hashRangeproofs)
     ss += txTo.nLockTime.to_bytes(4, "little")
-    ss += struct.pack("<I", hashtype)
+    ss += hashtype.to_bytes(4, "little")
     return ss
 
 def SegwitV0SignatureHash(*args, **kwargs):
@@ -962,7 +962,7 @@ def BIP341_sha_scriptpubkeys(spent_utxos):
     return sha256(b"".join(ser_string(u.scriptPubKey) for u in spent_utxos))
 
 def BIP341_sha_sequences(txTo):
-    return sha256(b"".join(struct.pack("<I", i.nSequence) for i in txTo.vin))
+    return sha256(b"".join(i.nSequence.to_bytes(4, "little") for i in txTo.vin))
 
 def BIP341_sha_outputs(txTo):
     return sha256(b"".join(o.serialize() for o in txTo.vout))
@@ -977,8 +977,8 @@ def TaprootSignatureMsg(txTo, spent_utxos, hash_type, genesis_hash, input_index 
     ss += ser_uint256(genesis_hash)
     ss += ser_uint256(genesis_hash)
     ss += bytes([hash_type]) # hash_type
-    ss += struct.pack("<i", txTo.nVersion)
-    ss += struct.pack("<I", txTo.nLockTime)
+    ss += txTo.nVersion.to_bytes(4, "little", signed=True)
+    ss += txTo.nLockTime.to_bytes(4, "little")
     if in_type != SIGHASH_ANYONECANPAY:
         ss += sha256(b"".join(struct.pack("B", ((not i.assetIssuance.isNull()) << 7) + (i.m_is_pegin << 6)) for i in txTo.vin))
         ss += BIP341_sha_prevouts(txTo)
@@ -1003,14 +1003,14 @@ def TaprootSignatureMsg(txTo, spent_utxos, hash_type, genesis_hash, input_index 
         ss += spent_utxos[input_index].nAsset.serialize()
         ss += spent_utxos[input_index].nValue.serialize()
         ss += ser_string(spk)
-        ss += struct.pack("<I", txTo.vin[input_index].nSequence)
+        ss +=  txTo.vin[input_index].nSequence.to_bytes(4, "little")
         if txTo.vin[input_index].assetIssuance.isNull():
             ss += b'\x00'
         else:
             ss += txTo.vin[input_index].assetIssuance.serialize()
             ss += sha256(txTo.wit.vtxinwit[input_index].serialize_issuance_proofs())
     else:
-        ss += struct.pack("<I", input_index)
+        ss += input_index.to_bytes(4, "little")
     if (spend_type & 1):
         ss += sha256(ser_string(annex))
     if out_type == SIGHASH_SINGLE:
@@ -1025,7 +1025,7 @@ def TaprootSignatureMsg(txTo, spent_utxos, hash_type, genesis_hash, input_index 
     if (scriptpath):
         ss += TaggedHash("TapLeaf/elements", bytes([leaf_ver]) + ser_string(script))
         ss += bytes([0])
-        ss += struct.pack("<i", codeseparator_pos)
+        ss += codeseparator_pos.to_bytes(4, "little", signed=True)
     # ELEMENTS -35 since we encode nAsset (33) + nValue (9) + nNonce (1) rather than nValue (8)
     exp_non_acp_len = 366 - (out_type != SIGHASH_ALL and out_type != SIGHASH_SINGLE) * 64 + (annex is not None) * 32 + scriptpath * 37
     if in_type != SIGHASH_ANYONECANPAY:

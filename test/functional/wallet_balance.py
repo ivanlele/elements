@@ -269,13 +269,13 @@ class WalletTest(BitcoinTestFramework):
         tx_orig = self.nodes[0].gettransaction(txid)['hex']
         # Increase fee by 1 coin
         tx_replace = tx_orig.replace(
-            struct.pack(">q", 99 * 10**8).hex(),
-            struct.pack(">q", 98 * 10**8).hex(),
+            (99 * 10**8).to_bytes(8, "big", signed=True).hex(),
+            (98 * 10**8).to_bytes(8, "big", signed=True).hex(),
         )
         fee = 6520
         tx_replace = tx_replace.replace( ## is there something less fragile we can do here?
-            struct.pack(">q", fee).hex(),
-            struct.pack(">q", fee + 10**8).hex(),
+            fee.to_bytes(8, "big", signed=True).hex(),
+            (fee + 10**8).to_bytes(8, "big", signed=True).hex()
         )
         tx_replace = self.nodes[0].signrawtransactionwithwallet(tx_replace)['hex']
         # Total balance is given by the sum of outputs of the tx

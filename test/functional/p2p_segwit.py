@@ -5,7 +5,6 @@
 """Test segwit transactions and blocks on P2P network."""
 from decimal import Decimal
 import random
-import struct
 import time
 
 from test_framework.blocktools import (
@@ -1198,11 +1197,11 @@ class SegWitTest(BitcoinTestFramework):
                 if not self.wit.is_null():
                     flags |= 1
                 r = b""
-                r += struct.pack("<i", self.nVersion)
-                r += struct.pack("<B", flags)
+                r += self.nVersion.to_bytes(4, "little", signed=True)
+                r += flags.to_bytes(1, "little")
                 r += ser_vector(self.vin)
                 r += ser_vector(self.vout)
-                r += struct.pack("<I", self.nLockTime)
+                r += self.nLockTime.to_bytes(4, "little")
                 if flags & 1:
                     r += self.wit.serialize()
                 return r
@@ -2047,11 +2046,11 @@ class SegWitTest(BitcoinTestFramework):
         def serialize_with_bogus_witness(tx):
             flags = 3
             r = b""
-            r += struct.pack("<i", tx.nVersion)
-            r += struct.pack("<B", flags)
+            r += tx.nVersion.to_bytes(4, "little", signed=True)
+            r += flags.to_bytes(1, "little")
             r += ser_vector(tx.vin)
             r += ser_vector(tx.vout)
-            r += struct.pack("<I", tx.nLockTime)
+            r += tx.nLockTime.to_bytes(4, "little")
             if flags & 1:
                 if len(tx.wit.vtxinwit) != len(tx.vin):
                     # vtxinwit must have the same length as vin
