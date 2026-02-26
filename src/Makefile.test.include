@@ -410,7 +410,8 @@ test_fuzz_fuzz_SOURCES = \
  test/fuzz/utxo_total_supply.cpp \
  test/fuzz/validation_load_mempool.cpp \
  test/fuzz/versionbits.cpp \
- test/fuzz/witness_program.cpp
+ test/fuzz/witness_program.cpp \
+ test/fuzz/vecdeque.cpp 
 endif # ENABLE_FUZZ_BINARY
 
 nodist_test_test_bitcoin_SOURCES = $(GENERATED_TEST_FILES)
