@@ -409,6 +409,7 @@ BASE_SCRIPTS = [
     'feature_addrman.py',
     'feature_asmap.py',
     'feature_fastprune.py',
+    'feature_framework_miniwallet.py',
     'mempool_unbroadcast.py',
     # ELEMENTS: need to point past versions at our own release server
     #'mempool_compatibility.py',
