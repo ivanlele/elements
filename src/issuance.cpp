@@ -79,7 +79,7 @@ void AppendInitialIssuance(CBlock& genesis_block, const COutPoint& prevout, cons
 
     // Note: Genesis block isn't actually validated, outputs are entered into utxo db only
     CMutableTransaction txNew;
-    txNew.nVersion = 1;
+    txNew.version = 1;
     txNew.vin.resize(1);
     txNew.vin[0].prevout = prevout;
     txNew.vin[0].assetIssuance.assetEntropy = contract;

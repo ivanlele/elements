@@ -857,12 +857,12 @@ class CTxWitness:
 
 
 class CTransaction:
-    __slots__ = ("hash", "nLockTime", "nVersion", "sha256", "vin", "vout",
+    __slots__ = ("hash", "nLockTime", "version", "sha256", "vin", "vout",
                  "wit")
 
     def __init__(self, tx=None):
         if tx is None:
-            self.nVersion = 2
+            self.version = 2
             self.vin = []
             self.vout = []
             self.wit = CTxWitness()
@@ -870,7 +870,7 @@ class CTransaction:
             self.sha256 = None
             self.hash = None
         else:
-            self.nVersion = tx.nVersion
+            self.version = tx.version
             self.vin = copy.deepcopy(tx.vin)
             self.vout = copy.deepcopy(tx.vout)
             self.nLockTime = tx.nLockTime
@@ -879,7 +879,7 @@ class CTransaction:
             self.wit = copy.deepcopy(tx.wit)
 
     def deserialize(self, f):
-        self.nVersion = int.from_bytes(f.read(4), "little", signed=True)
+        self.version = int.from_bytes(f.read(4), "little")
         flags = struct.unpack("<B", f.read(1))[0]
         self.vin = deser_vector(f, CTxIn)
         self.vout = deser_vector(f, CTxOut)
@@ -898,7 +898,7 @@ class CTransaction:
     # Only applicable for non-CT, non-segwit transactions
     def serialize_without_witness(self):
         r = b""
-        r += self.nVersion.to_bytes(4, "little", signed=True)
+        r += self.version.to_bytes(4, "little")
         r += struct.pack("B", 0)
         r += ser_vector(self.vin)
         r += ser_vector(self.vout)
@@ -911,7 +911,7 @@ class CTransaction:
         if not self.wit.is_null():
             flags |= 1
         r = b""
-        r += struct.pack("<i", self.nVersion)
+        r += struct.pack("<I", self.version)
         r += struct.pack("<B", flags)
         r += ser_vector(self.vin)
         r += ser_vector(self.vout)
@@ -993,8 +993,8 @@ class CTransaction:
         return math.ceil(self.get_weight() / WITNESS_SCALE_FACTOR)
 
     def __repr__(self):
-        return "CTransaction(nVersion=%i vin=%s vout=%s wit=%s nLockTime=%i)" \
-            % (self.nVersion, repr(self.vin), repr(self.vout), repr(self.wit), self.nLockTime)
+        return "CTransaction(version=%i vin=%s vout=%s wit=%s nLockTime=%i)" \
+            % (self.version, repr(self.vin), repr(self.vout), repr(self.wit), self.nLockTime)
 
 
 class CProof:

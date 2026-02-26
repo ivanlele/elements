@@ -62,7 +62,7 @@ static std::vector<unsigned char> CommitToArguments(const Consensus::Params& par
 static CBlock CreateGenesisBlock(const Consensus::Params& params, const CScript& genesisScriptSig, const CScript& genesisOutputScript, uint32_t nTime, uint32_t nNonce, uint32_t nBits, int32_t nVersion, const CAmount& genesisReward)
 {
     CMutableTransaction txNew;
-    txNew.nVersion = 1;
+    txNew.version = 1;
     txNew.vin.resize(1);
     txNew.vin[0].scriptSig = genesisScriptSig;
     txNew.vout.emplace_back(CAsset(), genesisReward, genesisOutputScript);

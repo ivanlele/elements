@@ -131,7 +131,7 @@ class TapHashPeginTest(BitcoinTestFramework):
         else:
             tx = CTransaction()
 
-        tx.nVersion = ver
+        tx.version = ver
         tx.nLockTime = locktime
         # Spend the pegin and taproot tx together
         in_total = prev_tx.vout[prev_vout].nValue.getAmount()

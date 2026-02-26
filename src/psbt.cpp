@@ -114,7 +114,7 @@ CMutableTransaction PartiallySignedTransaction::GetUnsignedTx(bool force_unblind
     }
 
     CMutableTransaction mtx;
-    mtx.nVersion = *tx_version;
+    mtx.version = *tx_version;
     bool locktime_success = ComputeTimeLock(mtx.nLockTime);
     assert(locktime_success);
     uint32_t max_sequence = CTxIn::SEQUENCE_FINAL;
@@ -982,7 +982,7 @@ uint32_t PartiallySignedTransaction::GetVersion() const
 
 void PartiallySignedTransaction::SetupFromTx(const CMutableTransaction& tx)
 {
-    tx_version = tx.nVersion;
+    tx_version = tx.version;
     fallback_locktime = tx.nLockTime;
 
     uint32_t i;

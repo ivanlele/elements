@@ -769,7 +769,7 @@ def LegacySignatureMsg(script, txTo, inIdx, hashtype, enable_sighash_rangeproof=
     # sighash serialization is different from non-witness serialization
     # do manual sighash serialization:
     s = b""
-    s += txtmp.nVersion.to_bytes(4, "little", signed=True)
+    s += txtmp.version.to_bytes(4, "little")
     # ELEMENTS: vin serialization is different from non-witness serialization (pegin/issuance
     #  flags are not set in the sighash)
     s += ser_compact_size(len(txtmp.vin))
@@ -890,7 +890,7 @@ def SegwitV0SignatureMsg(script, txTo, inIdx, hashtype, amount, enable_sighash_r
             hashRangeproofs = uint256_from_str(hash256(serialize_rangeproofs))
 
     ss = bytes()
-    ss += txTo.nVersion.to_bytes(4, "little", signed=True)
+    ss += txTo.version.to_bytes(4, "little")
     ss += ser_uint256(hashPrevouts)
     ss += ser_uint256(hashSequence)
     ss += ser_uint256(hashIssuance)
@@ -977,7 +977,7 @@ def TaprootSignatureMsg(txTo, spent_utxos, hash_type, genesis_hash, input_index 
     ss += ser_uint256(genesis_hash)
     ss += ser_uint256(genesis_hash)
     ss += bytes([hash_type]) # hash_type
-    ss += txTo.nVersion.to_bytes(4, "little", signed=True)
+    ss += txTo.version.to_bytes(4, "little")
     ss += txTo.nLockTime.to_bytes(4, "little")
     if in_type != SIGHASH_ANYONECANPAY:
         ss += sha256(b"".join(struct.pack("B", ((not i.assetIssuance.isNull()) << 7) + (i.m_is_pegin << 6)) for i in txTo.vin))

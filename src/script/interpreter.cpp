@@ -2346,8 +2346,8 @@ public:
     /** Serialize txTo */
     template<typename S>
     void Serialize(S &s) const {
-        // Serialize nVersion
-        ::Serialize(s, txTo.nVersion);
+        // Serialize version
+        ::Serialize(s, txTo.version);
         // Serialize vin
         unsigned int nInputs = fAnyoneCanPay ? 1 : txTo.vin.size();
         ::WriteCompactSize(s, nInputs);
@@ -2642,7 +2642,7 @@ void PrecomputedTransactionData::Init(const T& txTo, std::vector<CTxOut>&& spent
         simplicityRawTx.numInputs = simplicityRawInput.size();
         simplicityRawTx.output = simplicityRawOutput.data();
         simplicityRawTx.numOutputs = simplicityRawOutput.size();
-        simplicityRawTx.version = (uint32_t)txTo.nVersion;
+        simplicityRawTx.version = (uint32_t)txTo.version;
         simplicityRawTx.lockTime = txTo.nLockTime;
 
         m_simplicity_tx_data = SimplicityTransactionUniquePtr(simplicity_elements_mallocTransaction(&simplicityRawTx));
@@ -2722,7 +2722,7 @@ bool SignatureHashSchnorr(uint256& hash_out, ScriptExecutionData& execdata, cons
     ss << hash_type;
 
     // Transaction level data
-    ss << tx_to.nVersion;
+    ss << tx_to.version;
     ss << tx_to.nLockTime;
     if (input_type != SIGHASH_ANYONECANPAY) {
         ss << cache.m_outpoints_flag_single_hash;
@@ -2854,7 +2854,7 @@ uint256 SignatureHash(const CScript& scriptCode, const T& txTo, unsigned int nIn
 
         HashWriter ss{};
         // Version
-        ss << txTo.nVersion;
+        ss << txTo.version;
         // Input prevouts/nSequence (none/all, depending on flags)
         ss << hashPrevouts;
         ss << hashSequence;
@@ -3019,7 +3019,7 @@ bool GenericTransactionSignatureChecker<T>::CheckSequence(const CScriptNum& nSeq
 
     // Fail if the transaction's version number is not set high
     // enough to trigger BIP 68 rules.
-    if (static_cast<uint32_t>(txTo->nVersion) < 2)
+    if (txTo->version < 2)
         return false;
 
     // Sequence numbers with their most significant bit set are not
@@ -3066,7 +3066,7 @@ uint32_t GenericTransactionSignatureChecker<T>::GetLockTime() const
 template <class T>
 int32_t GenericTransactionSignatureChecker<T>::GetTxVersion() const
 {
-    return txTo->nVersion;
+    return txTo->version;
 }
 
 template <class T>

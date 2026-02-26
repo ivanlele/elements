@@ -2344,7 +2344,7 @@ static RPCHelpMan joinpsbts()
         // Choose the highest version number
         if (*psbtx.tx_version > best_version) {
             best_version = *psbtx.tx_version;
-            best_version = static_cast<uint32_t>(psbtx.tx->nVersion);
+            best_version = psbtx.tx->version;
         }
         // Choose the lowest lock time
         if (*psbtx.fallback_locktime < best_locktime) {
@@ -2358,7 +2358,7 @@ static RPCHelpMan joinpsbts()
     merged_psbt.fallback_locktime = best_locktime;
     // TODO: Remove for PSBTv2
     merged_psbt.tx = CMutableTransaction();
-    merged_psbt.tx->nVersion = best_version;
+    merged_psbt.tx->version = best_version;
     merged_psbt.tx->nLockTime = best_locktime;
 
     // Merge
@@ -2396,7 +2396,7 @@ static RPCHelpMan joinpsbts()
     shuffled_psbt.fallback_locktime = merged_psbt.fallback_locktime;
     // TODO: Remove for PSBTv2
     shuffled_psbt.tx = CMutableTransaction();
-    shuffled_psbt.tx->nVersion = merged_psbt.tx->nVersion;
+    shuffled_psbt.tx->version = merged_psbt.tx->version;
     shuffled_psbt.tx->nLockTime = merged_psbt.tx->nLockTime;
     for (int i : input_indices) {
         shuffled_psbt.AddInput(merged_psbt.inputs[i]);

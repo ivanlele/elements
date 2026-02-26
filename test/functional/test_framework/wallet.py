@@ -345,7 +345,7 @@ class MiniWallet:
         tx.vout = [CTxOut(amount_per_output, bytearray(self._scriptPubKey)) for _ in range(num_outputs)]
         if fee != 0:
             tx.vout.append(CTxOut(nValue=CTxOutValue(fee)))
-        tx.nVersion = version
+        tx.version = version
         tx.nLockTime = locktime
 
         self.sign_tx(tx)
