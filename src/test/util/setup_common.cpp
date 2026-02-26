@@ -258,7 +258,7 @@ ChainTestingSetup::ChainTestingSetup(const ChainType chainType, const std::vecto
     const ChainstateManager::Options chainman_opts{
         .chainparams = chainparams,
         .datadir = m_args.GetDataDirNet(),
-        .check_block_index = true,
+        .check_block_index = 1,
         .minimum_chain_work = std::nullopt,
         .assumed_valid_block = std::nullopt,
         .notifications = *m_node.notifications,
