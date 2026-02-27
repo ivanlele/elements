@@ -60,7 +60,9 @@ class Coin;
 class SigningProvider;
 enum class MemPoolRemovalReason;
 enum class SigningResult;
-enum class TransactionError;
+namespace common {
+enum class PSBTError;
+} // namespace common
 namespace interfaces {
 class Wallet;
 }
@@ -720,7 +722,7 @@ public:
      * @param[in] finalize whether to create the final scriptSig or scriptWitness if possible
      * return error
      */
-    TransactionError FillPSBT(PartiallySignedTransaction& psbtx,
+    std::optional<common::PSBTError> FillPSBT(PartiallySignedTransaction& psbtx,
                   bool& complete,
                   int sighash_type = SIGHASH_DEFAULT,
                   bool sign = true,
@@ -731,8 +733,8 @@ public:
                   bool finalize = true) const;
 
     // ELEMENTS
-    TransactionError FillPSBTData(PartiallySignedTransaction& psbtx, bool bip32derivs = false, bool include_explicit = false) const;
-    TransactionError SignPSBT(PartiallySignedTransaction& psbtx, bool& complete, int sighash_type = 1, bool sign = true, bool imbalance_ok = false, bool bip32derivs = false, size_t* n_signed = nullptr, bool finalize = true) const;
+    std::optional<common::PSBTError> FillPSBTData(PartiallySignedTransaction& psbtx, bool bip32derivs = false, bool include_explicit = false) const;
+    std::optional<common::PSBTError> SignPSBT(PartiallySignedTransaction& psbtx, bool& complete, int sighash_type = 1, bool sign = true, bool imbalance_ok = false, bool bip32derivs = false, size_t* n_signed = nullptr, bool finalize = true) const;
     BlindingStatus WalletBlindPSBT(PartiallySignedTransaction& psbtx) const;
     // end ELEMENTS
 

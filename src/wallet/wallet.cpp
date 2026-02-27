@@ -12,7 +12,9 @@
 #include <chain.h>
 #include <coins.h>
 #include <common/args.h>
+#include <common/messages.h>
 #include <common/settings.h>
+#include <common/signmessage.h>
 #include <common/system.h>
 #include <consensus/amount.h>
 #include <consensus/consensus.h>
@@ -26,6 +28,7 @@
 #include <key.h>
 #include <key_io.h>
 #include <logging.h>
+#include <node/types.h>
 #include <outputtype.h>
 #include <pegins.h>
 #include <policy/feerate.h>
@@ -52,10 +55,8 @@
 #include <uint256.h>
 #include <univalue.h>
 #include <util/check.h>
-#include <util/error.h>
 #include <util/fs.h>
 #include <util/fs_helpers.h>
-#include <util/message.h>
 #include <util/moneystr.h>
 #include <util/result.h>
 #include <util/string.h>
@@ -88,8 +89,12 @@ struct KeyOriginInfo;
 #include <blind.h>
 #include <issuance.h>
 #include <crypto/hmac_sha256.h>
-
+using common::AmountErrMsg;
+using common::AmountHighWarn;
+using common::PSBTError;
 using interfaces::FoundBlock;
+using util::ReplaceAll;
+using util::ToString;
 
 namespace wallet {
 
@@ -2284,7 +2289,7 @@ bool CWallet::SignTransaction(CMutableTransaction& tx, const std::map<COutPoint,
 }
 
 // ELEMENTS: split FillPSBT into FillPSBData and SignPSBT
-TransactionError CWallet::FillPSBTData(PartiallySignedTransaction& psbtx, bool bip32derivs, bool include_explicit) const
+std::optional<PSBTError> CWallet::FillPSBTData(PartiallySignedTransaction& psbtx, bool bip32derivs, bool include_explicit) const
 {
     LOCK(cs_wallet);
 
@@ -2340,7 +2345,7 @@ TransactionError CWallet::FillPSBTData(PartiallySignedTransaction& psbtx, bool b
             script = input.witness_utxo.scriptPubKey;
         } else if (input.non_witness_utxo) {
             if (*input.prev_out >= input.non_witness_utxo->vout.size()) {
-                return TransactionError::MISSING_INPUTS;
+                return PSBTError::MISSING_INPUTS;
             }
             script = input.non_witness_utxo->vout[*input.prev_out].scriptPubKey;
         } else {
@@ -2362,9 +2367,9 @@ TransactionError CWallet::FillPSBTData(PartiallySignedTransaction& psbtx, bool b
 
             // Fill in the information from the spk_man
             // ELEMENTS: Get key origin info for input, if bip32derivs is true. Does not actually sign anything.
-            TransactionError res = spk_man->FillPSBT(psbtx, txdata, 1, false /* don't sign */, bip32derivs, nullptr, false);
-            if (res != TransactionError::OK) {
-                return res;
+            const auto error{spk_man->FillPSBT(psbtx, txdata, 1, false /* don't sign */, bip32derivs, nullptr, false)};
+            if (error) {
+                return error;
             }
 
             // Add this spk_man to visited_spk_mans so we can skip it later
@@ -2372,7 +2377,7 @@ TransactionError CWallet::FillPSBTData(PartiallySignedTransaction& psbtx, bool b
         }
     }
 
-    return TransactionError::OK;
+    return {};
 }
 
 BlindingStatus CWallet::WalletBlindPSBT(PartiallySignedTransaction& psbtx) const
@@ -2410,7 +2415,7 @@ BlindingStatus CWallet::WalletBlindPSBT(PartiallySignedTransaction& psbtx) const
     // Blind the PSBT
     return BlindPSBT(psbtx, our_input_data, our_issuances_to_blind);
 }
-TransactionError CWallet::SignPSBT(PartiallySignedTransaction& psbtx, bool& complete, int sighash_type, bool sign, bool imbalance_ok, bool bip32derivs, size_t* n_signed, bool finalize) const
+std::optional<PSBTError> CWallet::SignPSBT(PartiallySignedTransaction& psbtx, bool& complete, int sighash_type, bool sign, bool imbalance_ok, bool bip32derivs, size_t* n_signed, bool finalize) const
 {
     LOCK(cs_wallet);
 
@@ -2423,13 +2428,13 @@ TransactionError CWallet::SignPSBT(PartiallySignedTransaction& psbtx, bool& comp
                     case BlindProofResult::OK:
                         break;
                     case BlindProofResult::NOT_FULLY_BLINDED:
-                        return TransactionError::BLINDING_REQUIRED;
+                        return PSBTError::BLINDING_REQUIRED;
                     case BlindProofResult::INVALID_VALUE_PROOF:
                     case BlindProofResult::MISSING_VALUE_PROOF:
-                        return TransactionError::INVALID_VALUE_PROOF;
+                        return PSBTError::INVALID_VALUE_PROOF;
                     case BlindProofResult::INVALID_ASSET_PROOF:
                     case BlindProofResult::MISSING_ASSET_PROOF:
-                        return TransactionError::INVALID_ASSET_PROOF;
+                        return PSBTError::INVALID_ASSET_PROOF;
                 }
 
                 if (o.script && IsMine(*o.script)) {
@@ -2453,10 +2458,10 @@ TransactionError CWallet::SignPSBT(PartiallySignedTransaction& psbtx, bool& comp
                                 assert(CAsset(o.m_asset) == asset);
                             }
                         } else {
-                            return TransactionError::MISSING_SIDECHANNEL_DATA;
+                            return PSBTError::MISSING_SIDECHANNEL_DATA;
                         }
                     } else {
-                        return TransactionError::MISSING_BLINDING_KEY;
+                        return PSBTError::MISSING_BLINDING_KEY;
                     }
                 }
             }
@@ -2552,14 +2557,14 @@ TransactionError CWallet::SignPSBT(PartiallySignedTransaction& psbtx, bool& comp
         for (const PSBTInput& input : psbtx.inputs) {
             CTxOut utxo;
             if (!input.GetUTXO(utxo)) {
-                return TransactionError::UTXOS_MISSING_BALANCE_CHECK;
+                return PSBTError::UTXOS_MISSING_BALANCE_CHECK;
             }
             inputs_utxos.push_back(utxo);
         }
 
         CTransaction tx_tmp(tx);
         if (!VerifyAmounts(inputs_utxos, tx_tmp, nullptr, false)) {
-            return TransactionError::VALUE_IMBALANCE;
+            return PSBTError::VALUE_IMBALANCE;
         }
     }
 
@@ -2568,9 +2573,9 @@ TransactionError CWallet::SignPSBT(PartiallySignedTransaction& psbtx, bool& comp
     for (ScriptPubKeyMan* spk_man : GetAllScriptPubKeyMans()) {
         int n_signed_this_spkm = 0;
         // ELEMENTS: Here we _only_ sign, and do not e.g. fill in key origin data.
-        TransactionError res = spk_man->FillPSBT(psbtx, txdata, sighash_type, sign, bip32derivs, &n_signed_this_spkm, finalize);
-        if (res != TransactionError::OK) {
-            return res;
+        const auto error{spk_man->FillPSBT(psbtx, txdata, sighash_type, sign, bip32derivs, &n_signed_this_spkm, finalize)};
+        if (error) {
+            return error;
         }
 
         if (n_signed) {
@@ -2586,24 +2591,27 @@ TransactionError CWallet::SignPSBT(PartiallySignedTransaction& psbtx, bool& comp
         complete &= PSBTInputSigned(input);
     }
 
-    return TransactionError::OK;
+    return {};
 }
 
 // This function remains for backwards compatibility. It will not succeed in Elements unless everything involved is non-blinded.
-TransactionError CWallet::FillPSBT(PartiallySignedTransaction& psbtx, bool& complete, int sighash_type, bool sign, bool bip32derivs, bool imbalance_ok, size_t* n_signed, bool include_explicit, bool finalize) const
+std::optional<common::PSBTError> CWallet::FillPSBT(PartiallySignedTransaction& psbtx, bool& complete, int sighash_type, bool sign, bool bip32derivs, bool imbalance_ok, size_t* n_signed, bool include_explicit, bool finalize) const
 {
     complete = false;
-    TransactionError te;
-    te = FillPSBTData(psbtx, bip32derivs, include_explicit);
-    if (te != TransactionError::OK) {
-        return te;
+    
+    std::optional<common::PSBTError> error;
+    error = FillPSBTData(psbtx, bip32derivs, include_explicit);
+    if (error) {
+        return error;
     }
+    
     // For backwards compatibility, do not check if amounts balance before signing in this case.
-    te = SignPSBT(psbtx, complete, sighash_type, sign, imbalance_ok, bip32derivs, n_signed, finalize);
-    if (te != TransactionError::OK) {
-        return te;
+    
+    error = SignPSBT(psbtx, complete, sighash_type, sign, imbalance_ok, bip32derivs, n_signed, finalize);
+    if (error) {
+        return error;
     }
-    return TransactionError::OK;
+    return {};
 }
 
 SigningResult CWallet::SignMessage(const std::string& message, const PKHash& pkhash, std::string& str_sig) const

@@ -3,6 +3,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <key_io.h>
+#include <node/types.h>
 #include <util/bip32.h>
 #include <util/strencodings.h>
 #include <wallet/wallet.h>
@@ -58,7 +59,7 @@ BOOST_AUTO_TEST_CASE(psbt_updater_test)
     ssData >> psbtx;
 
     // Fill transaction with our data
-    BOOST_REQUIRE_EQUAL(TransactionError::OK, m_wallet.FillPSBTData(psbtx, true));
+    BOOST_REQUIRE(!m_wallet.FillPSBTData(psbtx, true));
 
     // Get the final tx
     DataStream ssTx{};
@@ -72,7 +73,7 @@ BOOST_AUTO_TEST_CASE(psbt_updater_test)
     // Try to sign the mutated input
     SignatureData sigdata;
     bool complete = true;
-    BOOST_CHECK(m_wallet.FillPSBT(psbtx, complete, SIGHASH_ALL, true, true) != TransactionError::OK);
+    BOOST_CHECK(m_wallet.FillPSBT(psbtx, complete, SIGHASH_ALL, true, true));
 }
 
 BOOST_AUTO_TEST_CASE(parse_hd_keypath)

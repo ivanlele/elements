@@ -35,6 +35,8 @@
 
 #include <assert.h>
 
+using util::SplitString;
+
 static CScript StrHexToScriptWithDefault(std::string strScript, const CScript defaultScript)
 {
     CScript returnScript;

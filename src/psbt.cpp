@@ -8,6 +8,7 @@
 #include <chainparams.h>
 #include <pegins.h>
 #include <primitives/transaction.h>
+#include <node/types.h>
 #include <policy/policy.h>
 #include <script/signingprovider.h>
 #include <util/check.h>
@@ -913,17 +914,17 @@ bool FinalizeAndExtractPSBT(PartiallySignedTransaction& psbtx, CMutableTransacti
     return true;
 }
 
-TransactionError CombinePSBTs(PartiallySignedTransaction& out, const std::vector<PartiallySignedTransaction>& psbtxs)
+bool CombinePSBTs(PartiallySignedTransaction& out, const std::vector<PartiallySignedTransaction>& psbtxs)
 {
     out = psbtxs[0]; // Copy the first one
 
     // Merge
     for (auto it = std::next(psbtxs.begin()); it != psbtxs.end(); ++it) {
         if (!out.Merge(*it)) {
-            return TransactionError::PSBT_MISMATCH;
+            return false;
         }
     }
-    return TransactionError::OK;
+    return true;
 }
 
 std::string PSBTRoleName(PSBTRole role) {

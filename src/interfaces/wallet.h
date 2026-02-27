@@ -7,13 +7,13 @@
 
 #include <asset.h>                     // For CAmountMap
 #include <addresstype.h>
+#include <common/signmessage.h>
 #include <consensus/amount.h>
 #include <interfaces/chain.h>
 #include <pubkey.h>
 #include <script/script.h>
 #include <support/allocators/secure.h>
 #include <util/fs.h>
-#include <util/message.h>
 #include <util/result.h>
 #include <util/ui_change_type.h>
 
@@ -31,9 +31,14 @@ class CFeeRate;
 class CKey;
 enum class FeeReason;
 enum class OutputType;
-enum class TransactionError;
 struct PartiallySignedTransaction;
 struct bilingual_str;
+namespace common {
+enum class PSBTError;
+} // namespace common
+namespace node {
+enum class TransactionError;
+} // namespace node
 namespace wallet {
 struct BlindDetails;
 class CCoinControl;
@@ -206,7 +211,7 @@ public:
         int& num_blocks) = 0;
 
     //! Fill PSBT.
-    virtual TransactionError fillPSBT(int sighash_type,
+    virtual std::optional<common::PSBTError> fillPSBT(int sighash_type,
         bool sign,
         bool bip32derivs,
         size_t* n_signed,

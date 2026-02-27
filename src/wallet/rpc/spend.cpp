@@ -3,16 +3,17 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <assetsdir.h>
+#include <common/messages.h>
 #include <consensus/validation.h>
 #include <core_io.h>
 #include <issuance.h>
 #include <key_io.h>
+#include <node/types.h>
 #include <policy/policy.h>
 #include <rpc/rawtransaction_util.h>
 #include <rpc/util.h>
 #include <script/pegins.h>
 #include <script/script.h>
-#include <util/fees.h>
 #include <util/rbf.h>
 #include <util/translation.h>
 #include <util/vector.h>
@@ -27,6 +28,12 @@
 #include <univalue.h>
 
 using wallet::CRecipient;
+using common::FeeModeFromString;
+using common::FeeModes;
+using common::InvalidEstimateModeErrorMessage;
+using common::StringForFeeReason;
+using common::TransactionErrorString;
+using node::TransactionError;
 
 namespace wallet {
 std::vector<CRecipient> CreateRecipients(const std::vector<std::pair<CTxDestination, CTxOut>>& outputs, const std::set<int>& subtract_fee_outputs)
@@ -117,9 +124,9 @@ static UniValue FinishTransaction(const std::shared_ptr<CWallet> pwallet, const 
     // so external signers are not asked to sign more than once.
     bool complete;
     pwallet->FillPSBT(psbtx, complete, SIGHASH_DEFAULT, /*sign=*/false, /*bip32derivs=*/true);
-    const TransactionError err{pwallet->FillPSBT(psbtx, complete, SIGHASH_DEFAULT, /*sign=*/true, /*bip32derivs=*/false, /*imbalance_ok=*/true)};
-    if (err != TransactionError::OK) {
-        throw JSONRPCTransactionError(err);
+    const auto err{pwallet->FillPSBT(psbtx, complete, SIGHASH_DEFAULT, /*sign=*/true, /*bip32derivs=*/false, /*imbalance_ok=*/true)};
+    if (err) {
+        throw JSONRPCPSBTError(*err);
     }
 
     CMutableTransaction mtx;
@@ -1269,8 +1276,8 @@ static RPCHelpMan bumpfee_helper(std::string method_name)
     } else {
         PartiallySignedTransaction psbtx(mtx, 2 /* version */);
         bool complete = false;
-        const TransactionError err = pwallet->FillPSBT(psbtx, complete, SIGHASH_DEFAULT, /*sign=*/false, /*bip32derivs=*/true);
-        CHECK_NONFATAL(err == TransactionError::OK);
+        const auto err{pwallet->FillPSBT(psbtx, complete, SIGHASH_DEFAULT, /*sign=*/false, /*bip32derivs=*/true)};
+        CHECK_NONFATAL(!err);
         CHECK_NONFATAL(!complete);
         DataStream ssTx{};
         ssTx << psbtx;
@@ -1731,9 +1738,9 @@ RPCHelpMan walletprocesspsbt()
     bool complete = true;
 
 
-    const TransactionError err{wallet.FillPSBT(psbtx, complete, nHashType, false, bip32derivs, true, nullptr, true, false)};
-    if (err != TransactionError::OK) {
-        throw JSONRPCTransactionError(err);
+    const auto err{wallet.FillPSBT(psbtx, complete, nHashType, false, bip32derivs, true, nullptr, true, false)};
+    if (err) {
+        throw JSONRPCPSBTError(*err);
     }
 
     // If not blinded but needs blinding, blind
@@ -1757,9 +1764,9 @@ RPCHelpMan walletprocesspsbt()
         bool sign = request.params[1].isNull() ? true : request.params[1].get_bool();
         if (sign) {
             EnsureWalletIsUnlocked(*pwallet);
-            const TransactionError err = pwallet->FillPSBT(psbtx, complete, nHashType, sign, bip32derivs, true, nullptr, true, finalize);
-            if (err != TransactionError::OK) {
-                throw JSONRPCTransactionError(err);
+            const auto err{pwallet->FillPSBT(psbtx, complete, nHashType, sign, bip32derivs, true, nullptr, true, finalize)};
+            if (err) {
+                throw JSONRPCPSBTError(*err);
             }
         }
     }
@@ -2024,9 +2031,10 @@ RPCHelpMan walletcreatefundedpsbt()
     // Fill transaction with out data but don't sign
     bool bip32derivs = request.params[4].isNull() ? true : request.params[4].get_bool();
     bool complete = true;
-    const TransactionError err{wallet.FillPSBT(psbtx, complete, 1, /*sign=*/false, /*bip32derivs=*/bip32derivs, /*imbalance_ok=*/true, /*n_signed=*/nullptr, include_explicit)};
-    if (err != TransactionError::OK) {
-        throw JSONRPCTransactionError(err);
+
+    const auto err{wallet.FillPSBT(psbtx, complete, 1, /*sign=*/false, /*bip32derivs=*/bip32derivs, /*imbalance_ok=*/true, /*n_signed=*/nullptr, include_explicit)};
+    if (err) {
+        throw JSONRPCPSBTError(*err);
     }
 
     // Serialize the PSBT

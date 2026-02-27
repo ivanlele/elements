@@ -119,6 +119,9 @@
 #include <zmq/zmqrpc.h>
 #endif
 
+using common::AmountErrMsg;
+using common::InvalidPortErrMsg;
+using common::ResolveErrMsg;
 using kernel::DumpMempool;
 using kernel::LoadMempool;
 using kernel::ValidationCacheSizes;
@@ -137,6 +140,9 @@ using node::NodeContext;
 using node::ShouldPersistMempool;
 using node::ImportBlocks;
 using node::VerifyLoadedChainstate;
+using util::Join;
+using util::ReplaceAll;
+using util::ToString;
 
 static constexpr bool DEFAULT_PROXYRANDOMIZE{true};
 static constexpr bool DEFAULT_REST_ENABLE{false};
