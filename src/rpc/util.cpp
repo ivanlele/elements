@@ -5,17 +5,17 @@
 #include <config/bitcoin-config.h> // IWYU pragma: keep
 
 #include <clientversion.h>
-#include <core_io.h>
 #include <common/args.h>
 #include <common/messages.h>
 #include <common/types.h>
 #include <consensus/amount.h>
-#include <script/interpreter.h>
+#include <core_io.h>
 #include <key_io.h>
 #include <node/types.h>
 #include <outputtype.h>
 #include <rpc/util.h>
 #include <script/descriptor.h>
+#include <script/interpreter.h>
 #include <script/signingprovider.h>
 #include <script/solver.h>
 #include <tinyformat.h>
@@ -27,8 +27,6 @@
 #include <util/translation.h>
 #include <policy/policy.h>
 #include <assetsdir.h>
-#include <warnings.h>
-
 #include <algorithm>
 #include <iterator>
 #include <string_view>
@@ -1595,18 +1593,4 @@ void PushWarnings(const std::vector<bilingual_str>& warnings, UniValue& obj)
 {
     if (warnings.empty()) return;
     obj.pushKV("warnings", BilingualStringsToUniValue(warnings));
-}
-
-UniValue GetNodeWarnings(bool use_deprecated)
-{
-    if (use_deprecated) {
-        const auto all_warnings{GetWarnings()};
-        return all_warnings.empty() ? "" : all_warnings.back().original;
-    }
-
-    UniValue warnings{UniValue::VARR};
-    for (auto&& warning : GetWarnings()) {
-        warnings.push_back(std::move(warning.original));
-    }
-    return warnings;
 }

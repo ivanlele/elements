@@ -19,6 +19,7 @@
 #include <script/generic.hpp>
 #include <script/pegins.h>
 #include <secp256k1.h>
+#include <util/check.h>
 #include <util/signalinterrupt.h>
 #include <util/moneystr.h>
 #include <wallet/coincontrol.h>
@@ -204,7 +205,7 @@ RPCHelpMan getpeginaddress()
         throw JSONRPCError(RPC_INTERNAL_ERROR, message);
     }
     auto context = pwallet->chain().context();
-    node::KernelNotifications notifications(*(context->shutdown), context->exit_status);
+    node::KernelNotifications notifications(*(context->shutdown), context->exit_status, *Assert(context->warnings));
     ChainstateManager::Options chain_opts{
         .chainparams = chainparams,
         .datadir = gArgs.GetDataDirNet(),
