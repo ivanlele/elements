@@ -330,6 +330,7 @@ BASE_SCRIPTS = [
     'mempool_package_limits.py',
     # ELEMENTS: no versionbits in use
     #'feature_versionbits_warning.py',
+    'mempool_package_rbf.py',
     'rpc_preciousblock.py',
     'wallet_importprunedfunds.py --legacy-wallet',
     'wallet_importprunedfunds.py --descriptors',
