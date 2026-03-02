@@ -187,8 +187,8 @@ do
         git -C "$WORKTREE" diff > "$DIFF_FILE"
         git -C "$WORKTREE" reset --hard "$GIT_HEAD" > /dev/null
         # FILES=$(grep "CONFLICT" "$MERGE_FILE")
-        NUM_FILES=$(grep -c "CONFLICT" "$MERGE_FILE")
-        NUM_CONFLICTS=$(grep -c "<<<<<<<" "$DIFF_FILE")
+        NUM_FILES=$(grep -c "CONFLICT" "$MERGE_FILE" || true)
+        NUM_CONFLICTS=$(grep -c "<<<<<<<" "$DIFF_FILE" || true)
         echo "$COUNT. Merge up to $PR_ID ($HASH) has $NUM_CONFLICTS conflicts in $NUM_FILES files."
         if [[ "$COUNT" == "$NUM" ]]; then
             exit 0
