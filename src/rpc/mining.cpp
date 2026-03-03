@@ -1388,7 +1388,8 @@ static RPCHelpMan getcompactsketch()
         throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "Cannot obtain sketch of empty block.");
     }
 
-    CBlockHeaderAndShortTxIDs cmpctblock(block);
+    uint64_t nonce = GetRand<uint64_t>();
+    CBlockHeaderAndShortTxIDs cmpctblock(block, nonce);
 
     DataStream ssCompactBlock;
     ssCompactBlock << TX_WITH_WITNESS(cmpctblock);
