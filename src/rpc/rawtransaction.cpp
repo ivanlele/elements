@@ -2787,7 +2787,7 @@ void issueasset_base(CMutableTransaction& mtx, RawIssuanceDetails& issuance_deta
 
     if (asset_amount > 0) {
         // Fee output is required to be last. We will insert _before_ the selected position, which preserves that.
-        int asset_place = GetRand<int>(mtx.vout.size());
+        int asset_place = FastRandomContext().randrange<int>(mtx.vout.size());
 
         CTxOut asset_out(asset, asset_amount, asset_script);
         // If blinded address, insert the pubkey into the nonce field for later substitution by blinding
@@ -2805,7 +2805,7 @@ void issueasset_base(CMutableTransaction& mtx, RawIssuanceDetails& issuance_deta
 
     if (token_amount > 0) {
         // Calculate this _after_ we conditionally insert the asset output, which changes mtx.vout.size().
-        int token_place = GetRand<int>(mtx.vout.size());
+        int token_place = FastRandomContext().randrange<int>(mtx.vout.size());
 
         CTxOut token_out(token, token_amount, token_script);
         // If blinded address, insert the pubkey into the nonce field for later substitution by blinding
@@ -2838,7 +2838,7 @@ void reissueasset_base(CMutableTransaction& mtx, size_t issuance_input_index, co
     mtx.vin[issuance_input_index].assetIssuance.nAmount = asset_amount;
 
     // Place assets into randomly placed output slots, before change output, inserted in place
-    int asset_place = GetRand<int>(mtx.vout.size());
+    int asset_place = FastRandomContext().randrange<int>(mtx.vout.size());
 
     CTxOut asset_out(asset, asset_amount, asset_script);
     // If blinded address, insert the pubkey into the nonce field for later substitution by blinding

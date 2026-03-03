@@ -25,6 +25,7 @@
 #include <policy/policy.h>
 #include <node/warnings.h>
 #include <pow.h>
+#include <random.h>
 #include <rpc/blockchain.h>
 #include <rpc/mining.h>
 #include <rpc/server.h>
@@ -1388,7 +1389,7 @@ static RPCHelpMan getcompactsketch()
         throw JSONRPCError(RPC_DESERIALIZATION_ERROR, "Cannot obtain sketch of empty block.");
     }
 
-    uint64_t nonce = GetRand<uint64_t>();
+    uint64_t nonce = FastRandomContext().rand64();
     CBlockHeaderAndShortTxIDs cmpctblock(block, nonce);
 
     DataStream ssCompactBlock;

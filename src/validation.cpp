@@ -5807,7 +5807,7 @@ bool ChainstateManager::ShouldCheckBlockIndex() const
 {
     // Assert to verify Flatten() has been called.
     if (!*Assert(m_options.check_block_index)) return false;
-    if (GetRand(*m_options.check_block_index) >= 1) return false;
+    if (FastRandomContext().randrange(*m_options.check_block_index) >= 1) return false;
     return true;
 }
 
