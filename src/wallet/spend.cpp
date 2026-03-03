@@ -1096,6 +1096,17 @@ static void DiscourageFeeSniping(CMutableTransaction& tx, FastRandomContext& rng
     }
 }
 
+// seem to be unused
+size_t GetSerializeSizeForRecipient(const CRecipient& recipient)
+{
+    return ::GetSerializeSize(CTxOut(recipient.asset, recipient.nAmount, GetScriptForDestination(recipient.dest)));
+}
+
+bool IsDust(const CRecipient& recipient, const CFeeRate& dustRelayFee)
+{
+    return ::IsDust(CTxOut(recipient.asset, recipient.nAmount, GetScriptForDestination(recipient.dest)), dustRelayFee);
+}
+
 // Reset all non-global blinding details.
 static void resetBlindDetails(BlindDetails* det, bool preserve_output_data = false) {
     det->i_amount_blinds.clear();
