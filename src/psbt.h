@@ -2246,8 +2246,14 @@ struct PartiallySignedTransaction
             inputs.push_back(input);
 
             // Make sure the non-witness utxo matches the outpoint
-            if (input.non_witness_utxo && ((tx != std::nullopt && input.non_witness_utxo->GetHash() != tx->vin[i].prevout.hash) || (!input.prev_txid.IsNull() && input.non_witness_utxo->GetHash() != input.prev_txid))) {
-                throw std::ios_base::failure("Non-witness UTXO does not match outpoint hash");
+            if (input.non_witness_utxo) {
+                if ((tx != std::nullopt && input.non_witness_utxo->GetHash() != tx->vin[i].prevout.hash) ||
+                    (!input.prev_txid.IsNull() && input.non_witness_utxo->GetHash() != input.prev_txid)) {
+                    throw std::ios_base::failure("Non-witness UTXO does not match outpoint hash");
+                }
+                if (tx != std::nullopt && tx->vin[i].prevout.n >= input.non_witness_utxo->vout.size()) {
+                    throw std::ios_base::failure("Input specifies output index that does not exist");
+                }
             }
             ++i;
         }
