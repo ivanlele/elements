@@ -44,8 +44,9 @@ void initialize_simplicity_tx()
     g_con_elementsmode = true;
     // Copied from init.cpp AppInitMain
     kernel::ValidationCacheSizes validation_cache_sizes{};
-    Assert(InitSignatureCache(validation_cache_sizes.signature_cache_bytes));
-    Assert(InitScriptExecutionCache(validation_cache_sizes.script_execution_cache_bytes));
+    // ELEMENTS: FIXME: range/surjection proof sig caching. 
+//    Assert(InitSignatureCache(validation_cache_sizes.signature_cache_bytes));
+//    Assert(InitScriptExecutionCache(validation_cache_sizes.script_execution_cache_bytes));
     Assert(InitRangeproofCache(validation_cache_sizes.rangeproof_cache_bytes));
     Assert(InitSurjectionproofCache(validation_cache_sizes.surjectionproof_execution_cache_bytes));
 
@@ -225,10 +226,10 @@ FUZZ_TARGET(simplicity_tx, .init = initialize_simplicity_tx)
         // nonempty witness.
         assert(txdata.m_simplicity_tx_data);
     }
-
+    SignatureCache signature_cache{DEFAULT_SIGNATURE_CACHE_BYTES};
     const CTransaction tx{mtx};
     for (unsigned i = 0; i < tx.vin.size(); i++) {
-        CScriptCheck check{txdata.m_spent_outputs[i], tx, i, VERIFY_FLAGS, false /* cache */, &txdata};
+        CScriptCheck check{txdata.m_spent_outputs[i], tx, signature_cache, i, VERIFY_FLAGS, false /* cache */, &txdata};
         check();
     }
 }

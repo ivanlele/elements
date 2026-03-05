@@ -12,11 +12,11 @@
 
 namespace kernel {
 struct ValidationCacheSizes {
-    size_t signature_cache_bytes{DEFAULT_MAX_SIG_CACHE_BYTES / 4};
-    size_t script_execution_cache_bytes{DEFAULT_MAX_SIG_CACHE_BYTES / 4};
+    size_t signature_cache_bytes{DEFAULT_VALIDATION_CACHE_BYTES / 4};
+    size_t script_execution_cache_bytes{DEFAULT_VALIDATION_CACHE_BYTES / 4};
     // ELEMENTS
-    size_t rangeproof_cache_bytes{DEFAULT_MAX_SIG_CACHE_BYTES / 4};
-    size_t surjectionproof_execution_cache_bytes{DEFAULT_MAX_SIG_CACHE_BYTES / 4};
+    size_t rangeproof_cache_bytes{DEFAULT_VALIDATION_CACHE_BYTES / 4};
+    size_t surjectionproof_execution_cache_bytes{DEFAULT_VALIDATION_CACHE_BYTES / 4};
 };
 }
 
