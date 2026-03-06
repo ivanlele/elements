@@ -2234,7 +2234,7 @@ util::Result<CreatedTransactionResult> FundTransaction(CWallet& wallet, const CM
             const auto wtx = wallet.GetWalletTx(outPoint.hash);
             const auto asset = wtx->GetOutputAsset(wallet, outPoint.n);
             if (asset != ::policyAsset && output_assets.count(asset) == 0) {
-                return util::Error{_(strprintf("Transaction is missing an output for input asset %s", asset.GetHex()).c_str())};
+                return util::Error{strprintf(_("Transaction is missing an output for input asset %s"), asset.GetHex())};
             }
         } else if (txin.m_is_pegin) {
             // ELEMENTS: input is pegin
