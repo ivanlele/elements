@@ -117,7 +117,7 @@ struct CBlockLocator
 {
     std::vector<uint256> vHave;
 
-    CBlockLocator() {}
+    CBlockLocator() = default;
 
     explicit CBlockLocator(const std::vector<uint256>& vHaveIn) : vHave(vHaveIn) {}
 

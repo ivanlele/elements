@@ -31,8 +31,8 @@ class CCheck
      ScriptError error{SCRIPT_ERR_UNKNOWN_ERROR};
 
  public:
-     CCheck() {}
-     virtual ~CCheck() {}
+     CCheck() = default;
+     virtual ~CCheck() = default;
 
      virtual bool operator()() = 0;
 

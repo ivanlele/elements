@@ -83,7 +83,7 @@ struct PeginSubsidy {
     int height{std::numeric_limits<int>::max()};
     CAmount threshold{0};
 
-    PeginSubsidy() {};
+    PeginSubsidy() = default;
     bool IsDefined() {
         return threshold > 0 || height < std::numeric_limits<int>::max();
     };
@@ -93,7 +93,7 @@ struct PeginMinimum {
     int height{std::numeric_limits<int>::max()};
     CAmount amount{0};
 
-    PeginMinimum() {};
+    PeginMinimum() = default;
     bool IsDefined() {
         return amount > 0 || height < std::numeric_limits<int>::max();
     };
@@ -211,7 +211,7 @@ public:
     static std::unique_ptr<const CChainParams> TestNet();
 
 protected:
-    CChainParams() {}
+    CChainParams() = default;
 
     Consensus::Params consensus;
     MessageStartChars pchMessageStart;

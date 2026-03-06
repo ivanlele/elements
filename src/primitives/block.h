@@ -23,7 +23,7 @@ public:
     CScript challenge{};
     CScript solution{};
 
-    CProof() {}
+    CProof() = default;
     CProof(CScript challengeIn, CScript solutionIn) : challenge(challengeIn), solution(solutionIn) {}
 
     template <typename Stream>
@@ -75,7 +75,7 @@ public:
 
     // Each constructor sets its own serialization type implicitly based on which
     // arguments are given
-    DynaFedParamEntry() {};
+    DynaFedParamEntry() = default;
     DynaFedParamEntry(const CScript& signblockscript_in, const uint32_t sbs_wit_limit_in, const uint256 elided_root_in) : m_signblockscript(signblockscript_in), m_signblock_witness_limit(sbs_wit_limit_in), m_elided_root(elided_root_in) { m_serialize_type = 1; };
     DynaFedParamEntry(const CScript& signblockscript_in, const uint32_t sbs_wit_limit_in, const CScript& fedpeg_program_in, const CScript& fedpegscript_in, const std::vector<std::vector<unsigned char>> extension_space_in) : m_signblockscript(signblockscript_in), m_signblock_witness_limit(sbs_wit_limit_in), m_fedpeg_program(fedpeg_program_in), m_fedpegscript(fedpegscript_in), m_extension_space(extension_space_in) { m_serialize_type = 2; };
 
@@ -179,7 +179,7 @@ public:
     // Proposed rules for next epoch
     DynaFedParamEntry m_proposed{};
 
-    DynaFedParams() {};
+    DynaFedParams() = default;
     DynaFedParams(const DynaFedParamEntry& current, const DynaFedParamEntry& proposed)  : m_current(current), m_proposed(proposed) {};
 
     SERIALIZE_METHODS(DynaFedParams, obj) { READWRITE(obj.m_current, obj.m_proposed); }
@@ -427,7 +427,7 @@ struct CBlockLocator
 
     std::vector<uint256> vHave;
 
-    CBlockLocator() {}
+    CBlockLocator() = default;
 
     explicit CBlockLocator(std::vector<uint256>&& have) : vHave(std::move(have)) {}
 
