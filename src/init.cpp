@@ -307,11 +307,12 @@ void Shutdown(NodeContext& node)
 
     StopTorControl();
 
+    if (node.chainman && node.chainman->m_thread_load.joinable()) node.chainman->m_thread_load.join();
     // After everything has been shut down, but before things get flushed, stop the
-    // scheduler and load block thread.
+    // the scheduler. After this point, SyncWithValidationInterfaceQueue() should not be called anymore
+    // as this would prevent the shutdown from completing.
     if (node.scheduler) node.scheduler->stop();
     if (node.reverification_scheduler) node.reverification_scheduler->stop(); // ELEMENTS
-    if (node.chainman && node.chainman->m_thread_load.joinable()) node.chainman->m_thread_load.join();
 
     // After the threads that potentially access these pointers have been stopped,
     // destruct and reset all to nullptr.
