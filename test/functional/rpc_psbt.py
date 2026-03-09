@@ -8,6 +8,9 @@ from decimal import Decimal
 from itertools import product
 # from random import randbytes
 
+from test_framework.blocktools import (
+    MAX_STANDARD_TX_WEIGHT,
+)
 from test_framework.descriptors import descsum_create
 from test_framework.key import H_POINT
 from test_framework.messages import (
@@ -16,6 +19,7 @@ from test_framework.messages import (
     # CTxIn,
     # CTxOut,
     MAX_BIP125_RBF_SEQUENCE,
+    WITNESS_SCALE_FACTOR,
 )
 # from test_framework.psbt import (
 #     PSBT,
@@ -30,6 +34,7 @@ from test_framework.messages import (
 #     PSBT_OUT_TAP_TREE,
 # )
 # from test_framework.script import CScript, OP_TRUE
+from test_framework.script_util import MIN_STANDARD_TX_NONWITNESS_SIZE
 from test_framework.test_framework import BitcoinTestFramework
 from test_framework.util import (
     # assert_approx,
@@ -242,6 +247,48 @@ class PSBTTest(BitcoinTestFramework):
         starting_n_unspent = len(self.nodes[0].listlockunspent()) # ELEMENTS
         # Create and fund a raw tx for sending 10 BTC
         psbtx1 = self.nodes[0].walletcreatefundedpsbt([], [{self.get_address(confidential, 2):10}])['psbt']
+
+        self.log.info("Test for invalid maximum transaction weights")
+        dest_arg = [{self.nodes[0].getnewaddress(): 1}]
+        min_tx_weight = MIN_STANDARD_TX_NONWITNESS_SIZE * WITNESS_SCALE_FACTOR
+        assert_raises_rpc_error(-4, f"Maximum transaction weight must be between {min_tx_weight} and {MAX_STANDARD_TX_WEIGHT}", self.nodes[0].walletcreatefundedpsbt, [], dest_arg, 0, {"max_tx_weight": -1})
+        assert_raises_rpc_error(-4, f"Maximum transaction weight must be between {min_tx_weight} and {MAX_STANDARD_TX_WEIGHT}", self.nodes[0].walletcreatefundedpsbt, [], dest_arg, 0, {"max_tx_weight": 0})
+        assert_raises_rpc_error(-4, f"Maximum transaction weight must be between {min_tx_weight} and {MAX_STANDARD_TX_WEIGHT}", self.nodes[0].walletcreatefundedpsbt, [], dest_arg, 0, {"max_tx_weight": MAX_STANDARD_TX_WEIGHT + 1})
+
+        # Base transaction vsize: version (4) + locktime (4) + input count (1) + witness overhead (1) = 10 vbytes
+        base_tx_vsize = 10
+        # ELEMENTS: P2WPKH output vsize: outpoint (66 vbytes)
+        p2wpkh_output_vsize = 66
+        # ELEMENTS: fee output always present: outpoint (46 vbytes)
+        fee_output_vsize = 46
+        # ELEMENTS: dummy values to satisfy blinding tx part
+        blinded_dummy_vsize = 1452
+        change_output_vsize = 1438
+        # 1 vbyte for output count
+        output_count = 1
+        tx_weight_without_inputs = (base_tx_vsize + output_count + p2wpkh_output_vsize + fee_output_vsize + blinded_dummy_vsize) * WITNESS_SCALE_FACTOR
+        # ELEMENTS: even a single-output tx without inputs exceeds min_tx_weight due to larger outputs
+        assert_greater_than(tx_weight_without_inputs, min_tx_weight)
+
+        # In order to test for when the passed max weight is less than the transaction weight without inputs
+        # Define destination with two outputs.
+        dest_arg_large = [{self.nodes[0].getnewaddress(): 1}, {self.nodes[0].getnewaddress(): 1}]
+        large_tx_vsize_without_inputs = base_tx_vsize + output_count + (p2wpkh_output_vsize * 2) + fee_output_vsize + blinded_dummy_vsize
+        large_tx_weight_without_inputs = large_tx_vsize_without_inputs * WITNESS_SCALE_FACTOR
+        assert_greater_than(large_tx_weight_without_inputs, min_tx_weight)
+        # Test for max_tx_weight less than Transaction weight without inputs
+        assert_raises_rpc_error(-4, "Maximum transaction weight is less than transaction weight without inputs", self.nodes[0].walletcreatefundedpsbt, [], dest_arg_large, 0, {"max_tx_weight": min_tx_weight})
+        assert_raises_rpc_error(-4, "Maximum transaction weight is less than transaction weight without inputs", self.nodes[0].walletcreatefundedpsbt, [], dest_arg_large, 0, {"max_tx_weight": large_tx_weight_without_inputs})
+
+        # Test for max_tx_weight just enough to include inputs but not change output
+        assert_raises_rpc_error(-4, "Maximum transaction weight is too low, can not accommodate change output", self.nodes[0].walletcreatefundedpsbt, [], dest_arg_large, 0, {"max_tx_weight": large_tx_weight_without_inputs + WITNESS_SCALE_FACTOR})
+        self.log.info("Test that a funded PSBT is always faithful to max_tx_weight option")
+        large_tx_vsize_with_change = large_tx_vsize_without_inputs + change_output_vsize
+        # It's enough but won't accommodate selected input size
+        assert_raises_rpc_error(-4, "The inputs size exceeds the maximum weight", self.nodes[0].walletcreatefundedpsbt, [], dest_arg_large, 0, {"max_tx_weight": (large_tx_vsize_with_change) * WITNESS_SCALE_FACTOR})
+
+        max_tx_weight_sufficient = 15000 # ELEMENTS: much larger due to confidential tx overhead
+        _ = self.nodes[0].walletcreatefundedpsbt(outputs=dest_arg,locktime=0, options={"max_tx_weight": max_tx_weight_sufficient})["psbt"]
 
         # If inputs are specified, do not automatically add more:
         utxo1 = self.nodes[0].listunspent()[0]
