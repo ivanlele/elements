@@ -112,7 +112,7 @@ static void ExitFailure(std::string_view str_err)
     exit(EXIT_FAILURE);
 }
 
-BasicTestingSetup::BasicTestingSetup(const ChainType chainType, const std::vector<const char*>& extra_args, const std::string& fedpegscript)
+BasicTestingSetup::BasicTestingSetup(const ChainType chainType, TestOpts opts, const std::string& fedpegscript)
     : m_path_root{fs::temp_directory_path() / "test_common_" PACKAGE_NAME / g_insecure_rand_ctx_temp_path.rand256().ToString()},
       m_args{}
 {
@@ -137,7 +137,7 @@ BasicTestingSetup::BasicTestingSetup(const ChainType chainType, const std::vecto
             "-debugexclude=libevent",
             "-debugexclude=leveldb",
         },
-        extra_args);
+        opts.extra_args);
     if (G_TEST_COMMAND_LINE_ARGUMENTS) {
         arguments = Cat(arguments, G_TEST_COMMAND_LINE_ARGUMENTS());
     }
@@ -229,8 +229,8 @@ BasicTestingSetup::~BasicTestingSetup()
     gArgs.ClearArgs();
 }
 
-ChainTestingSetup::ChainTestingSetup(const ChainType chainType, const std::vector<const char*>& extra_args, const std::string& fedpegscript)
-    : BasicTestingSetup(chainType, extra_args, fedpegscript)
+ChainTestingSetup::ChainTestingSetup(const ChainType chainType, TestOpts opts, const std::string& fedpegscript)
+    : BasicTestingSetup(chainType, opts)
 {
     const CChainParams& chainparams = Params();
 
@@ -315,14 +315,12 @@ void ChainTestingSetup::LoadVerifyActivateChainstate()
 
 TestingSetup::TestingSetup(
     const ChainType chainType,
-    const std::vector<const char*>& extra_args,
-    const std::string& fedpegscript,
-    const bool coins_db_in_memory,
-    const bool block_tree_db_in_memory)
-    : ChainTestingSetup(chainType, extra_args, fedpegscript)
+    TestOpts opts,
+    const std::string& fedpegscript)
+    : ChainTestingSetup(chainType, opts, fedpegscript)
 {
-    m_coins_db_in_memory = coins_db_in_memory;
-    m_block_tree_db_in_memory = block_tree_db_in_memory;
+    m_coins_db_in_memory = opts.coins_db_in_memory;
+    m_block_tree_db_in_memory = opts.block_tree_db_in_memory;
     // Ideally we'd move all the RPC tests to the functional testing framework
     // instead of unit tests, but for now we need these here.
     RegisterAllCoreRPCCommands(tableRPC);
@@ -351,12 +349,10 @@ TestingSetup::TestingSetup(
 }
 
 TestChain100Setup::TestChain100Setup(
-        const ChainType chain_type,
-        const std::vector<const char*>& extra_args,
-        const std::string& fedpegscript,
-        const bool coins_db_in_memory,
-        const bool block_tree_db_in_memory)
-    : TestingSetup{ChainType::REGTEST, extra_args, fedpegscript, coins_db_in_memory, block_tree_db_in_memory}
+    const ChainType chain_type,
+    TestOpts opts,
+    const std::string& fedpegscript)
+    : TestingSetup{ChainType::REGTEST, opts, fedpegscript}
 {
     SetMockTime(1598887952);
     constexpr std::array<unsigned char, 32> vchKey = {

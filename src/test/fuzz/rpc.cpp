@@ -41,7 +41,7 @@ using util::ToString;
 
 namespace {
 struct RPCFuzzTestingSetup : public TestingSetup {
-    RPCFuzzTestingSetup(const ChainType chain_type, const std::vector<const char*>& extra_args, const std::string& fedpegscript) : TestingSetup{chain_type, extra_args, fedpegscript}
+    RPCFuzzTestingSetup(const ChainType chain_type, TestOpts opts, const std::string& fedpegscript) : TestingSetup{chain_type, opts, fedpegscript}
     {
     }
 

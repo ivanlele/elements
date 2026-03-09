@@ -109,7 +109,7 @@ static void ComplexMemPool(benchmark::Bench& bench)
 static void MempoolCheck(benchmark::Bench& bench)
 {
     FastRandomContext det_rand{true};
-    auto testing_setup = MakeNoLogFileContext<TestChain100Setup>(ChainType::REGTEST, {"-checkmempool=1"});
+    auto testing_setup = MakeNoLogFileContext<TestChain100Setup>(ChainType::REGTEST, {.extra_args = {"-checkmempool=1"}});
     CTxMemPool& pool = *testing_setup.get()->m_node.mempool;
     LOCK2(cs_main, pool.cs);
     const CBlockIndex* chain_tip = testing_setup.get()->m_node.chainman->ActiveChainstate().m_chain.Tip();
