@@ -104,4 +104,4 @@ class BlockSubsidyTest(BitcoinTestFramework):
         #assert_template(self.nodes[1], block, None) # ELEMENTS: 0-value outputs not allowed
 
 if __name__ == '__main__':
-    BlockSubsidyTest().main()
+    BlockSubsidyTest(__file__).main()

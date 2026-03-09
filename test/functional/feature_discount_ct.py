@@ -364,4 +364,4 @@ class CTTest(BitcoinTestFramework):
 
 
 if __name__ == '__main__':
-    CTTest().main()
+    CTTest(__file__).main()

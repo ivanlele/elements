@@ -70,4 +70,4 @@ class NamedDefaultAssetTest(BitcoinTestFramework):
         assert_equal(walletinfo2["balance"]["testasset"], 5)
 
 if __name__ == '__main__':
-    NamedDefaultAssetTest().main()
+    NamedDefaultAssetTest(__file__).main()

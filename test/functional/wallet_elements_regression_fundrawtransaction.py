@@ -48,4 +48,4 @@ class WalletTest(BitcoinTestFramework):
         txid = self.nodes[0].sendrawtransaction(signed["hex"])
 
 if __name__ == '__main__':
-    WalletTest().main()
+    WalletTest(__file__).main()

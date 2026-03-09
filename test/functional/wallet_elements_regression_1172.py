@@ -125,4 +125,4 @@ class WalletCtTest(BitcoinTestFramework):
         self.log.info(f"Sent them back to node 1 in {txid}")
 
 if __name__ == '__main__':
-    WalletCtTest().main()
+    WalletCtTest(__file__).main()

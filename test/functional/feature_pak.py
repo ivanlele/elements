@@ -286,4 +286,4 @@ class PAKTest (BitcoinTestFramework):
         # TODO: create rawsendtomainchain to do transaction surgery for testing
 
 if __name__ == '__main__':
-    PAKTest ().main ()
+    PAKTest(__file__).main()

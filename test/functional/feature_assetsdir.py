@@ -70,4 +70,4 @@ class AssetdirTests(BitcoinTestFramework):
         assert_equal(issuances[0]["assetlabel"], "asset2")
 
 if __name__ == '__main__':
-    AssetdirTests().main()
+    AssetdirTests(__file__).main()

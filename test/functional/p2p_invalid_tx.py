@@ -232,4 +232,4 @@ class InvalidTxRequestTest(BitcoinTestFramework):
 
 
 if __name__ == '__main__':
-    InvalidTxRequestTest().main()
+    InvalidTxRequestTest(__file__).main()

@@ -154,4 +154,4 @@ class SimulateTxTest(BitcoinTestFramework):
         assert_approx(sim2["balance_change"][asset], +Decimal("50"))
 
 if __name__ == '__main__':
-    SimulateTxTest().main()
+    SimulateTxTest(__file__).main()

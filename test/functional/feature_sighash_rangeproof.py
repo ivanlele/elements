@@ -281,4 +281,4 @@ class SighashRangeproofTest(BitcoinTestFramework):
             self.assert_tx_valid(tx, False)
 
 if __name__ == '__main__':
-    SighashRangeproofTest().main()
+    SighashRangeproofTest(__file__).main()

@@ -530,4 +530,4 @@ class IssuanceTest(BitcoinTestFramework):
         self.nodes[0].sendrawtransaction(signed_tx["hex"])
 
 if __name__ == '__main__':
-    IssuanceTest ().main ()
+    IssuanceTest(__file__).main()

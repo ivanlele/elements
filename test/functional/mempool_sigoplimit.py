@@ -197,4 +197,4 @@ class BytesPerSigOpTest(BitcoinTestFramework):
 
 
 if __name__ == '__main__':
-    BytesPerSigOpTest().main()
+    BytesPerSigOpTest(__file__).main()

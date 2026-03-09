@@ -619,4 +619,4 @@ class WalletSendTest(BitcoinTestFramework):
 
 
 if __name__ == '__main__':
-    WalletSendTest().main()
+    WalletSendTest(__file__).main()

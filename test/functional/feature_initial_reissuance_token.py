@@ -86,4 +86,4 @@ class InitialReissuanceTokenTest(BitcoinTestFramework):
         assert_equal(walletinfo2["balance"]["bitcoin"], 1001)
 
 if __name__ == '__main__':
-    InitialReissuanceTokenTest().main()
+    InitialReissuanceTokenTest(__file__).main()

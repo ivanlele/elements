@@ -74,4 +74,4 @@ class WalletTest(BitcoinTestFramework):
         assert self.nodes[0].gettransaction(reissuance_txid)['amount'] == expected_amt
 
 if __name__ == '__main__':
-    WalletTest().main()
+    WalletTest(__file__).main()

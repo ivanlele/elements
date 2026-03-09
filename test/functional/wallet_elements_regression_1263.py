@@ -34,4 +34,4 @@ class RegressionTest(BitcoinTestFramework):
         assert_raises_rpc_error(-32603, "No valid fedpegscripts. Not running in Elements mode, check your 'chain' param.", rpc.getpeginaddress)
 
 if __name__ == '__main__':
-    RegressionTest().main()
+    RegressionTest(__file__).main()

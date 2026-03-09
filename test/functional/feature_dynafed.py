@@ -584,4 +584,4 @@ class DynaFedTest(BitcoinTestFramework):
         self.test_valid_epochs()
 
 if __name__ == '__main__':
-    DynaFedTest().main()
+    DynaFedTest(__file__).main()

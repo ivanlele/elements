@@ -1845,4 +1845,4 @@ class TaprootTest(BitcoinTestFramework):
 
 
 if __name__ == '__main__':
-    TaprootTest().main()
+    TaprootTest(__file__).main()

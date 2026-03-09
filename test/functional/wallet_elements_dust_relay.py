@@ -123,4 +123,4 @@ class WalletTest(BitcoinTestFramework):
         assert_raises_rpc_error(-26, "dust", self.nodes[1].sendrawtransaction, tx)
 
 if __name__ == '__main__':
-    WalletTest().main()
+    WalletTest(__file__).main()

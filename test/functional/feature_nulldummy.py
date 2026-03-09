@@ -160,4 +160,4 @@ class NULLDUMMYTest(BitcoinTestFramework):
 
 
 if __name__ == '__main__':
-    NULLDUMMYTest().main()
+    NULLDUMMYTest(__file__).main()

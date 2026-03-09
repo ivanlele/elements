@@ -919,4 +919,4 @@ class ImportMultiTest(BitcoinTestFramework):
 
 
 if __name__ == '__main__':
-    ImportMultiTest().main()
+    ImportMultiTest(__file__).main()

@@ -836,4 +836,4 @@ class CTTest (BitcoinTestFramework):
         # TODO: signrawtransactionwith{wallet, key} with confidential segwit input given as previous transaction arg
 
 if __name__ == '__main__':
-    CTTest ().main ()
+    CTTest(__file__).main ()

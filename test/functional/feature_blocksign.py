@@ -225,4 +225,4 @@ class BlockSignTest(BitcoinTestFramework):
         self.mine_blocks(10, True)
 
 if __name__ == '__main__':
-    BlockSignTest().main()
+    BlockSignTest(__file__).main()

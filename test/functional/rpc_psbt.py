@@ -1549,4 +1549,4 @@ class PSBTTest(BitcoinTestFramework):
             assert_raises_rpc_error(-8, "'all' is not a valid sighash parameter.", self.nodes[2].descriptorprocesspsbt, psbt, [descriptor], sighashtype="all")
 
 if __name__ == '__main__':
-    PSBTTest().main()
+    PSBTTest(__file__).main()

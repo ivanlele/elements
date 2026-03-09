@@ -194,4 +194,4 @@ class TapHashPeginTest(BitcoinTestFramework):
 
 
 if __name__ == '__main__':
-    TapHashPeginTest().main()
+    TapHashPeginTest(__file__).main()

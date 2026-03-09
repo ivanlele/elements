@@ -1655,4 +1655,4 @@ class RawTransactionsTest(BitcoinTestFramework):
             self.nodes[0].sendrawtransaction(signedtx['hex'])
 
 if __name__ == '__main__':
-    RawTransactionsTest().main()
+    RawTransactionsTest(__file__).main()

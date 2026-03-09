@@ -923,4 +923,4 @@ class PeginSubsidyTest(BitcoinTestFramework):
 
 
 if __name__ == "__main__":
-    PeginSubsidyTest().main()
+    PeginSubsidyTest(__file__).main()

@@ -140,4 +140,4 @@ class InvalidBlockRequestTest(BitcoinTestFramework):
 
 
 if __name__ == '__main__':
-    InvalidBlockRequestTest().main()
+    InvalidBlockRequestTest(__file__).main()

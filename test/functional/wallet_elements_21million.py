@@ -168,4 +168,4 @@ class WalletTest(BitcoinTestFramework):
         assert_equal(self.nodes[2].getbalance()[token], 200_000_000)
 
 if __name__ == '__main__':
-    WalletTest().main()
+    WalletTest(__file__).main()

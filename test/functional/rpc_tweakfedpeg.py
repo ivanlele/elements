@@ -118,4 +118,4 @@ class TweakFedpegTest(BitcoinTestFramework):
         assert_equal(self.nodes[2].tweakfedpegscript(claim_script, LIQUID_SCRIPT)["script"], liquid_tweaked)
 
 if __name__ == '__main__':
-    TweakFedpegTest().main()
+    TweakFedpegTest(__file__).main()

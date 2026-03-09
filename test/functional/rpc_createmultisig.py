@@ -260,4 +260,4 @@ class RpcCreateMultiSigTest(BitcoinTestFramework):
             assert_equal(self.nodes[0].deriveaddresses(sorted_key_desc)[0], t['address'])
 
 if __name__ == '__main__':
-    RpcCreateMultiSigTest().main()
+    RpcCreateMultiSigTest(__file__).main()

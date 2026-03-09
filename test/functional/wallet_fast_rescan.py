@@ -100,4 +100,4 @@ class WalletFastRescanTest(BitcoinTestFramework):
 
 
 if __name__ == '__main__':
-    WalletFastRescanTest().main()
+    WalletFastRescanTest(__file__).main()

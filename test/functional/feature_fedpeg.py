@@ -747,4 +747,4 @@ class FedPegTest(BitcoinTestFramework):
         self.stop_node(1)
 
 if __name__ == '__main__':
-    FedPegTest().main()
+    FedPegTest(__file__).main()

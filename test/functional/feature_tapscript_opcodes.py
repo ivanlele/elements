@@ -604,4 +604,4 @@ class TapHashPeginTest(BitcoinTestFramework):
         self.tapscript_satisfy_test(CScript([msg, long_pub, OP_CHECKSIGFROMSTACK]), inputs = [sig], fail="Public key version reserved for soft-fork upgrades")
 
 if __name__ == '__main__':
-    TapHashPeginTest().main()
+    TapHashPeginTest(__file__).main()

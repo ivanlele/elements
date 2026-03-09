@@ -70,4 +70,4 @@ class ConnectGenesisTest(BitcoinTestFramework):
         self.nodes[1].gettransaction(issuance_tx)
 
 if __name__ == '__main__':
-    ConnectGenesisTest().main()
+    ConnectGenesisTest(__file__).main()

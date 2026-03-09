@@ -120,4 +120,4 @@ class SimplicityActivationTest(BitcoinTestFramework):
         self.test_activation(self.nodes[0], 500)
 
 if __name__ == '__main__':
-    SimplicityActivationTest().main()
+    SimplicityActivationTest(__file__).main()

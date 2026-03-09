@@ -410,4 +410,4 @@ class AddressTypeTest(BitcoinTestFramework):
         assert len(info3["confidential_key"]) > 0
 
 if __name__ == '__main__':
-    AddressTypeTest().main()
+    AddressTypeTest(__file__).main()

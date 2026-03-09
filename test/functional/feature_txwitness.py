@@ -218,4 +218,4 @@ class TxWitnessTest(BitcoinTestFramework):
         self.test_transaction_serialization()
 
 if __name__ == '__main__':
-    TxWitnessTest().main()
+    TxWitnessTest(__file__).main()

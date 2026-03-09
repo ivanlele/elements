@@ -108,4 +108,4 @@ class BlockV4Test(BitcoinTestFramework):
         assert_equal(int(self.nodes[0].getbestblockhash(), 16), block.sha256)
 
 if __name__ == '__main__':
-    BlockV4Test().main()
+    BlockV4Test(__file__).main()

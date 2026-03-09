@@ -196,4 +196,4 @@ class BIP65Test(BitcoinTestFramework):
 
 
 if __name__ == '__main__':
-    BIP65Test().main()
+    BIP65Test(__file__).main()

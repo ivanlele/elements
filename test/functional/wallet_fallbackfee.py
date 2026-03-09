@@ -60,4 +60,4 @@ class WalletRBFTest(BitcoinTestFramework):
             self.nodes[1].claimpegin(raw, proof)
 
 if __name__ == '__main__':
-    WalletRBFTest().main()
+    WalletRBFTest(__file__).main()

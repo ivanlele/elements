@@ -113,4 +113,4 @@ class MandatoryCoinbaseTest(BitcoinTestFramework):
         assert_template(node1, block, "bad-cb-fee")
 
 if __name__ == '__main__':
-    MandatoryCoinbaseTest().main()
+    MandatoryCoinbaseTest(__file__).main()

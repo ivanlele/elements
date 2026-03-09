@@ -293,4 +293,4 @@ class CTTest(BitcoinTestFramework):
         print("---")
 
 if __name__ == '__main__':
-    CTTest().main()
+    CTTest(__file__).main()

@@ -61,4 +61,4 @@ class ProgressTest(BitcoinTestFramework):
         assert not node2.getblockchaininfo()["initialblockdownload"]
 
 if __name__ == '__main__':
-    ProgressTest().main()
+    ProgressTest(__file__).main()

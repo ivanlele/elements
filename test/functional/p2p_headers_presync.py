@@ -88,4 +88,4 @@ class PreSyncHeadersTest(BitcoinTestFramework):
         assert_equal(node.getpeerinfo()[0]['presynced_headers'], 2000)
 
 if __name__ == '__main__':
-    PreSyncHeadersTest().main()
+    PreSyncHeadersTest(__file__).main()
