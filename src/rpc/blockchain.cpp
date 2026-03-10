@@ -2426,7 +2426,7 @@ static RPCHelpMan scantxoutset()
             RPCResult{"when action=='start'; only returns after scan completes", RPCResult::Type::OBJ, "", "", {
                 {RPCResult::Type::BOOL, "success", "Whether the scan was completed"},
                 {RPCResult::Type::NUM, "txouts", "The number of unspent transaction outputs scanned"},
-                {RPCResult::Type::NUM, "height", "The current block height (index)"},
+                {RPCResult::Type::NUM, "height", "The block height at which the scan was done"},
                 {RPCResult::Type::STR_HEX, "bestblock", "The hash of the block at the tip of the chain"},
                 {RPCResult::Type::ARR, "unspents", "",
                 {
@@ -2440,6 +2440,8 @@ static RPCHelpMan scantxoutset()
                         {RPCResult::Type::STR_HEX, "asset", "The asset ID"},
                         {RPCResult::Type::BOOL, "coinbase", "Whether this is a coinbase output"},
                         {RPCResult::Type::NUM, "height", "Height of the unspent transaction output"},
+                        {RPCResult::Type::STR_HEX, "blockhash", "Blockhash of the unspent transaction output"},
+                        {RPCResult::Type::NUM, "confirmations", "Number of confirmations of the unspent transaction output when the scan was done"},
                     }},
                 }},
                 {RPCResult::Type::STR_AMOUNT, "total_unblinded_bitcoin_amount", "The total amount of all found unspent unblinded outputs in " + CURRENCY_UNIT},
@@ -2531,17 +2533,20 @@ static RPCHelpMan scantxoutset()
                 const COutPoint& outpoint = it.first;
                 const Coin& coin = it.second;
                 const CTxOut& txo = coin.out;
+                const CBlockIndex& coinb_block{*CHECK_NONFATAL(tip->GetAncestor(coin.nHeight))};
                 input_txos.push_back(txo);
                 total_in += txo.nValue.GetAmount();
 
                 UniValue unspent(UniValue::VOBJ);
                 unspent.pushKV("txid", outpoint.hash.GetHex());
-                unspent.pushKV("vout", (int32_t)outpoint.n);
+                unspent.pushKV("vout", outpoint.n);
                 unspent.pushKV("scriptPubKey", HexStr(txo.scriptPubKey));
                 unspent.pushKV("desc", descriptors[txo.scriptPubKey]);
                 unspent.pushKV("amount", ValueFromAmount(txo.nValue.GetAmount()));
                 unspent.pushKV("coinbase", coin.IsCoinBase());
-                unspent.pushKV("height", (int32_t)coin.nHeight);
+                unspent.pushKV("height", coin.nHeight);
+                unspent.pushKV("blockhash", coinb_block.GetBlockHash().GetHex());
+                unspent.pushKV("confirmations", tip->nHeight - coin.nHeight + 1);
 
                 unspents.push_back(unspent);
             }
@@ -2553,6 +2558,7 @@ static RPCHelpMan scantxoutset()
                 const COutPoint& outpoint = it.first;
                 const Coin& coin = it.second;
                 const CTxOut& txo = coin.out;
+                const CBlockIndex& coinb_block{*CHECK_NONFATAL(tip->GetAncestor(coin.nHeight))};
                 input_txos.push_back(txo);
                 if (txo.nValue.IsExplicit() && txo.nAsset.IsExplicit() && txo.nAsset.GetAsset() == Params().GetConsensus().pegged_asset) {
                     total_in_explicit_parent += txo.nValue.GetAmount();
@@ -2560,7 +2566,7 @@ static RPCHelpMan scantxoutset()
 
                 UniValue unspent(UniValue::VOBJ);
                 unspent.pushKV("txid", outpoint.hash.GetHex());
-                unspent.pushKV("vout", (int32_t)outpoint.n);
+                unspent.pushKV("vout", outpoint.n);
                 unspent.pushKV("scriptPubKey", HexStr(txo.scriptPubKey));
                 unspent.pushKV("desc", descriptors[txo.scriptPubKey]);
                 if (txo.nValue.IsExplicit()) {
@@ -2574,7 +2580,9 @@ static RPCHelpMan scantxoutset()
                     unspent.pushKV("assetcommitment", HexStr(txo.nAsset.vchCommitment));
                 }
                 unspent.pushKV("coinbase", coin.IsCoinBase());
-                unspent.pushKV("height", (int32_t)coin.nHeight);
+                unspent.pushKV("height", coin.nHeight);
+                unspent.pushKV("blockhash", coinb_block.GetBlockHash().GetHex());
+                unspent.pushKV("confirmations", tip->nHeight - coin.nHeight + 1);
 
                 unspents.push_back(unspent);
             }
