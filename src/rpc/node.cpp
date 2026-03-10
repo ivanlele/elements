@@ -533,7 +533,7 @@ static RPCHelpMan calcfastmerkleroot()
     std::vector<uint256> leaves;
     for (const UniValue& leaf : request.params[0].get_array().getValues()) {
         uint256 l;
-        l.SetHex(leaf.get_str());
+        l.SetHexDeprecated(leaf.get_str());
         leaves.push_back(l);
     }
 

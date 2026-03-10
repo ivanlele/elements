@@ -2198,7 +2198,7 @@ RPCHelpMan importissuanceblindingkey()
     }
     std::string txidstr = request.params[0].get_str();
     uint256 txid;
-    txid.SetHex(txidstr);
+    txid.SetHexDeprecated(txidstr);
 
     uint32_t vindex;
     if (!request.params[1].isNum()) {
@@ -2343,7 +2343,7 @@ RPCHelpMan dumpissuanceblindingkey()
     }
     std::string txidstr = request.params[0].get_str();
     uint256 txid;
-    txid.SetHex(txidstr);
+    txid.SetHexDeprecated(txidstr);
 
     uint32_t vindex;
     if (!request.params[1].isNum()) {
