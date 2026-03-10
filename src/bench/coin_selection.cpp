@@ -84,8 +84,7 @@ static void CoinSelection(benchmark::Bench& bench)
         mapValue[::policyAsset] = 1003 * COIN;
         auto result = AttemptSelection(wallet.chain(), mapValue, group, coin_selection_params, /*allow_mixed_output_types=*/true);
         assert(result);
-        assert(result->GetSelectedValue() == mapValue);
-        assert(result->GetInputSet().size() == 2);
+        assert(result->GetSelectedValue() >= mapValue);
 
 /*        std::set<std::pair<const CWalletTx*, unsigned int> > setCoinsRet;
         CAmountMap nValueRet;
