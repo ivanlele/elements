@@ -1,4 +1,5 @@
 afile
+amountIn
 asend
 ba
 blockin
@@ -8,8 +9,10 @@ clen
 covert
 crypted
 debbugs
+deques
 fo
 fpr
+hashIn
 hights
 inflight
 invokable
@@ -20,6 +23,7 @@ mor
 mut
 nd
 nin
+outIn
 requestor
 ser
 siz
@@ -28,6 +32,7 @@ unparseable
 unser
 useable
 validata
+viewIn
 warmup
 wit
 xwindows
