@@ -52,16 +52,17 @@ def create_deterministic_address_bcrt1_p2tr_op_true(hrp="ert", explicit_internal
     can be spent with a witness stack of OP_TRUE and the control block
     with internal public key (script-path spending).
 
-    Returns a tuple with the generated address and the internal key.
+    Returns a tuple with the generated address and the TaprootInfo object.
     """
     internal_key = explicit_internal_key or (2).to_bytes(32, 'big') # ELEMENTS: the given internal key from upstream failed to verify
-    address = output_key_to_p2tr(hrp, taproot_construct(internal_key, [(None, CScript([OP_TRUE]))]).output_pubkey)
+    taproot_info = taproot_construct(internal_key, [("only-path", CScript([OP_TRUE]))])
+    address = output_key_to_p2tr(hrp, taproot_info.output_pubkey)
     if explicit_internal_key is None:
         if hrp == "ert":
             assert_equal(address, 'ert1pxaxh5xm2p349fg5wqstrreat4atm00ktumm6q4vfu960ls09265sf37hcj')
         if hrp == "bcrt":
             assert_equal(address, 'bcrt1pxaxh5xm2p349fg5wqstrreat4atm00ktumm6q4vfu960ls09265sczkf3k')
-    return (address, internal_key)
+    return (address, taproot_info)
 
 
 def byte_to_base58(b, version):
