@@ -71,8 +71,8 @@ class InvalidBlockRequestTest(BitcoinTestFramework):
 
         # ELEMENTS: scriptpubkeys can't be empty or else we interpret them as fee outputs,
         #           so we modify the Core test to move the OP_TRUEs from scriptSig to scriptPubKey
-        tx1 = create_tx_with_script(block1.vtx[0], 0, script_pub_key=bytes([OP_TRUE]), amount=50 * COIN)
-        tx2 = create_tx_with_script(tx1, 0, script_pub_key=bytes([OP_TRUE]), amount=50 * COIN)
+        tx1 = create_tx_with_script(block1.vtx[0], 0, output_script=bytes([OP_TRUE]), amount=50 * COIN)
+        tx2 = create_tx_with_script(tx1, 0, output_script=bytes([OP_TRUE]), amount=50 * COIN)
         block2 = create_block(tip, create_coinbase(height), block_time, txlist=[tx1, tx2])
         block_time += 1
         block2.solve()
