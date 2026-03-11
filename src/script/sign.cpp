@@ -484,10 +484,10 @@ static bool SignStep(const SigningProvider& provider, const BaseSignatureCreator
     // ELEMENTS
     case TxoutType::FEE:
         return false;
-
     case TxoutType::OP_TRUE:
         return Params().anyonecanspend_aremine;
-
+    case TxoutType::ANCHOR:
+        return true;
     } // no default case, so the compiler can warn about missing cases
     assert(false);
 }
