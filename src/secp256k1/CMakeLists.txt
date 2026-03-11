@@ -1,11 +1,4 @@
-cmake_minimum_required(VERSION 3.13)
-
-if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.15)
-  # MSVC runtime library flags are selected by the CMAKE_MSVC_RUNTIME_LIBRARY abstraction.
-  cmake_policy(SET CMP0091 NEW)
-  # MSVC warning flags are not in CMAKE_<LANG>_FLAGS by default.
-  cmake_policy(SET CMP0092 NEW)
-endif()
+cmake_minimum_required(VERSION 3.16)
 
 project(libsecp256k1
   # The package (a.k.a. release) version is based on semantic versioning 2.0.0 of
@@ -245,7 +238,7 @@ else()
   string(REGEX REPLACE "-DNDEBUG[ \t\r\n]*" "" CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE}")
   string(REGEX REPLACE "-DNDEBUG[ \t\r\n]*" "" CMAKE_C_FLAGS_MINSIZEREL "${CMAKE_C_FLAGS_MINSIZEREL}")
   # Prefer -O2 optimization level. (-O3 is CMake's default for Release for many compilers.)
-  string(REGEX REPLACE "-O3[ \t\r\n]*" "-O2" CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE}")
+  string(REGEX REPLACE "-O3( |$)" "-O2\\1" CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE}")
 endif()
 
 # Define custom "Coverage" build type.
