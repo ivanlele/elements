@@ -61,9 +61,8 @@ class AssumeutxoTest(BitcoinTestFramework):
         bad_snapshot_path = valid_snapshot_path + '.mod'
         node = self.nodes[1]
 
-        def expected_error(log_msg="", rpc_details=""):
-            with node.assert_debug_log([log_msg]):
-                assert_raises_rpc_error(-32603, f"Unable to load UTXO snapshot{rpc_details}", node.loadtxoutset, bad_snapshot_path)
+        def expected_error(msg):
+            assert_raises_rpc_error(-32603, f"Unable to load UTXO snapshot: Population failed: {msg}", node.loadtxoutset, bad_snapshot_path)
 
         self.log.info("  - snapshot file with invalid file magic")
         parsing_error_code = -22
@@ -115,19 +114,19 @@ class AssumeutxoTest(BitcoinTestFramework):
                 f.write(valid_snapshot_contents[:47])
                 f.write((valid_num_coins + off).to_bytes(8, "little"))
                 f.write(valid_snapshot_contents[47 + 8:])
-            expected_error(log_msg=f"bad snapshot - coins left over after deserializing 298 coins" if off == -1 else f"bad snapshot format or truncated snapshot after deserializing 299 coins")
+            expected_error(msg="Bad snapshot - coins left over after deserializing 298 coins." if off == -1 else "Bad snapshot format or truncated snapshot after deserializing 299 coins.")
 
         self.log.info("  - snapshot file with alternated but parsable UTXO data results in different hash")
         cases = [
             # (content, offset, wrong_hash, custom_message)
             [b"\xff" * 32, 0, "fe24331eea3495e16b64f40f2b3c98141dcf197d7141d09ac73564b08df966a8", None],  # wrong outpoint hash
-            [(2).to_bytes(1, "little"), 32, None, "bad snapshot format or truncated snapshot after deserializing 1 coins"],  # wrong outpoint hash
-            [b"\xfd\xff\xff", 32, None, "[snapshot] mismatch in coins count in snapshot metadata and actual snapshot data"],  # txid coins count exceeds coins left
+            [(2).to_bytes(1, "little"), 32, None, "Bad snapshot format or truncated snapshot after deserializing 1 coins"],  # wrong outpoint hash
+            [b"\xfd\xff\xff", 32, None, "Mismatch in coins count in snapshot metadata and actual snapshot data"],  # txid coins count exceeds coins left
             [b"\x01", 33, "462a4ce4edeaa411e3b187e0aae625b81d35b8a113dc3ee2f2534e583a4dcfe4", None],  # wrong outpoint index
             [b"\x81", 34, "1c0631e0459385cf7568e955429697b1b8bf981f44268dc9b4a1758a5dfd116e", None],  # wrong coin code VARINT
             [b"\x80", 34, "ea23396cbe1f91cc5c75cade465df52d37f280bb5aad73a695a36ebfbb32ec01", None],  # another wrong coin code
-            [b"\x84\x58", 34, None, "[snapshot] bad snapshot data after deserializing 0 coins"],  # wrong coin case with height 364 and coinbase 0
-            [b"\xCA\xD2\x8F\x5A", 39, None, "[snapshot] bad snapshot format or truncated snapshot after deserializing 0 coins"],  # Amount exceeds MAX_MONEY
+            [b"\x84\x58", 34, None, "Bad snapshot data after deserializing 0 coins"],  # wrong coin case with height 364 and coinbase 0
+            [b"\xCA\xD2\x8F\x5A", 39, None, "Bad snapshot format or truncated snapshot after deserializing 0 coins"],  # Amount exceeds MAX_MONEY
         ]
 
         for content, offset, wrong_hash, custom_message in cases:
@@ -137,8 +136,8 @@ class AssumeutxoTest(BitcoinTestFramework):
                 f.write(content)
                 f.write(valid_snapshot_contents[(5 + 2 + 4 + 4 + 32 + 8 + offset + len(content)):])
 
-            log_msg = custom_message if custom_message is not None else f"[snapshot] bad snapshot content hash: expected 4f046c8d36732314b2ccd00be35232e7a211eb87b0fd8858f898f511bc7fae64, got {wrong_hash}"
-            expected_error(log_msg=log_msg)
+            msg = custom_message if custom_message is not None else f"Bad snapshot content hash: expected 4f046c8d36732314b2ccd00be35232e7a211eb87b0fd8858f898f511bc7fae64, got {wrong_hash}"
+            expected_error(msg)
 
     def test_headers_not_synced(self, valid_snapshot_path):
         for node in self.nodes[1:]:
@@ -189,8 +188,8 @@ class AssumeutxoTest(BitcoinTestFramework):
     def test_snapshot_with_less_work(self, dump_output_path):
         self.log.info("Test bitcoind should fail when snapshot has less accumulated work than this node.")
         node = self.nodes[0]
-        with node.assert_debug_log(expected_msgs=["[snapshot] activation failed - work does not exceed active chainstate"]):
-            assert_raises_rpc_error(-32603, "Unable to load UTXO snapshot", node.loadtxoutset, dump_output_path)
+        msg = "Unable to load UTXO snapshot: Population failed: Work does not exceed active chainstate."
+        assert_raises_rpc_error(-32603, msg, node.loadtxoutset, dump_output_path)
 
     def test_snapshot_block_invalidated(self, dump_output_path):
         self.log.info("Test snapshot is not loaded when base block is invalid.")
