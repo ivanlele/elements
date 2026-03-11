@@ -156,6 +156,9 @@ def output_key_to_p2tr(hrp, key, main=False): # ELEMENTS: added extra hrp parame
     assert len(key) == 32
     return program_to_witness(1, key, main, hrp)
 
+def p2a(main=False):
+    return program_to_witness(1, "4e73", main)
+
 def check_key(key):
     if (type(key) is str):
         key = bytes.fromhex(key)  # Assuming this is hex string
