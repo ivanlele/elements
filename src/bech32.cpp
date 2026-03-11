@@ -16,9 +16,6 @@ namespace bech32
 
 typedef std::vector<uint8_t> data;
 
-/** The Bech32 and Bech32m checksum size */
-constexpr size_t CHECKSUM_SIZE = 6;
-
 /** The Bech32 and Bech32m character set for encoding. */
 const char* CHARSET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
 
