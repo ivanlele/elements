@@ -447,6 +447,9 @@ namespace GUIUtil
         return false;
     }
 
+    QString WalletDisplayName(const std::string& name);
+    QString WalletDisplayName(const QString& name);
+
 } // namespace GUIUtil
 
 #endif // BITCOIN_QT_GUIUTIL_H
