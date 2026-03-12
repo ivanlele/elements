@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <util/chaintype.h>
 
+#include <cstdint>
 #include <memory>
 #include <string>
 
