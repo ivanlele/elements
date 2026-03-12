@@ -31,18 +31,24 @@ public:
         return CCoinsView::IsPeginSpent(outpoint);
     }
 
+    CoinsCachePair m_written_sentinel{};
     CCoinsMapMemoryResource resource;
     CCoinsMap mapCoinsWritten{0, CCoinsMap::hasher{}, CCoinsMap::key_equal{}, &resource};
-    bool BatchWrite(CCoinsMap &mapCoins, const uint256 &hashBlock, bool erase) override {
+    bool BatchWrite(CoinsViewCacheCursor& cursor, const uint256 &hashBlock) override {
         mapCoinsWritten.clear();
-        for (CCoinsMap::iterator it = mapCoins.begin(); it != mapCoins.end(); it = mapCoins.erase(it)) {
-            mapCoinsWritten[it->first] = it->second;
+        m_written_sentinel.second.SelfRef(m_written_sentinel);
+        for (auto it{cursor.Begin()}; it != cursor.End(); it = cursor.NextAndMaybeErase(*it)) {
+            auto [dest_it, inserted] = mapCoinsWritten.try_emplace(it->first);
+            dest_it->second.coin = it->second.coin;
+            dest_it->second.peginSpent = it->second.peginSpent;
+            dest_it->second.AddFlags(it->second.GetFlags(), *dest_it, m_written_sentinel);
         }
-        //mapCoinsWritten = mapCoins;
-        return CCoinsView::BatchWrite(mapCoins, hashBlock, erase);
+        return true;
     }
 
-    CCoinsViewTester() {}
+    CCoinsViewTester() {
+        m_written_sentinel.second.SelfRef(m_written_sentinel);
+    }
 };
 
 BOOST_AUTO_TEST_CASE(PeginSpent_validity)
@@ -77,40 +83,61 @@ BOOST_AUTO_TEST_CASE(PeginSpent_validity)
 
     CCoinsMapMemoryResource resource;
     CCoinsMap mapCoins{0, CCoinsMap::hasher{}, CCoinsMap::key_equal{}, &resource};
-    CCoinsCacheEntry entry;
+    CoinsCachePair sentinel{};
+    sentinel.second.SelfRef(sentinel);
+    size_t usage{0};
     std::pair<uint256, COutPoint> outpoint3(std::make_pair(GetRandHash(), COutPoint(Txid::FromUint256(GetRandHash()), 42)));
 
     //Attempt batch write of non-dirty pegin, no effect
-    entry.flags = CCoinsCacheEntry::PEGIN;
-    entry.peginSpent = true;
-    mapCoins.insert(std::make_pair(outpoint3, entry));
-    coinsCache.BatchWrite(mapCoins, uint256());
+    {
+        auto [it, inserted] = mapCoins.try_emplace(outpoint3);
+        it->second.peginSpent = true;
+        it->second.AddFlags(CCoinsCacheEntry::PEGIN, *it, sentinel);
+    }
+    {
+        auto cursor{CoinsViewCacheCursor(usage, sentinel, mapCoins, /*will_erase=*/true)};
+        coinsCache.BatchWrite(cursor, uint256());
+    }
     //Check for effect
     coins.IsPeginSpentCalled = false;
     BOOST_CHECK(!coinsCache.IsPeginSpent(outpoint3));
     BOOST_CHECK(coins.IsPeginSpentCalled);
-    BOOST_CHECK(mapCoins.size() == 0);
+    mapCoins.clear();
+    sentinel.second.SelfRef(sentinel);
 
     //Write again with pegin, dirty && fresh flags, but unspent. No effect.
-    entry.peginSpent = false;
-    entry.flags |= CCoinsCacheEntry::DIRTY | CCoinsCacheEntry::FRESH;
-    mapCoins.insert(std::make_pair(outpoint3, entry));
-    coinsCache.BatchWrite(mapCoins, uint256());
+    {
+        auto [it, inserted] = mapCoins.try_emplace(outpoint3);
+        it->second.peginSpent = false;
+        it->second.AddFlags(CCoinsCacheEntry::PEGIN | CCoinsCacheEntry::DIRTY | CCoinsCacheEntry::FRESH, *it, sentinel);
+    }
+    {
+        auto cursor{CoinsViewCacheCursor(usage, sentinel, mapCoins, /*will_erase=*/true)};
+        coinsCache.BatchWrite(cursor, uint256());
+    }
     //Check for effect
     coins.IsPeginSpentCalled = false;
     BOOST_CHECK(!coinsCache.IsPeginSpent(outpoint3));
     BOOST_CHECK(coins.IsPeginSpentCalled);
-    BOOST_CHECK(mapCoins.size() == 0);
+    mapCoins.clear();
+    sentinel.second.SelfRef(sentinel);
 
     //Re-mark as spent. It's super effective.
-    entry.peginSpent = true;
-    mapCoins.insert(std::make_pair(outpoint3, entry));
-    coinsCache.BatchWrite(mapCoins, uint256());
+    {
+        auto [it, inserted] = mapCoins.try_emplace(outpoint3);
+        it->second.peginSpent = true;
+        it->second.AddFlags(CCoinsCacheEntry::PEGIN | CCoinsCacheEntry::DIRTY | CCoinsCacheEntry::FRESH, *it, sentinel);
+    }
+    {
+        auto cursor{CoinsViewCacheCursor(usage, sentinel, mapCoins, /*will_erase=*/true)};
+        coinsCache.BatchWrite(cursor, uint256());
+    }
     //Check for effect
     coins.IsPeginSpentCalled = false;
     BOOST_CHECK(coinsCache.IsPeginSpent(outpoint3));
     BOOST_CHECK(!coins.IsPeginSpentCalled);
-    BOOST_CHECK(mapCoins.size() == 0);
+    mapCoins.clear();
+    sentinel.second.SelfRef(sentinel);
 
     //Add an entry we never IsPeginSpent'd first (ie added to cache via SetPeginSpent)
     std::pair<uint256, COutPoint> outpoint4(std::make_pair(GetRandHash(), COutPoint(Txid::FromUint256(GetRandHash()), 42)));
@@ -120,26 +147,33 @@ BOOST_AUTO_TEST_CASE(PeginSpent_validity)
     BOOST_CHECK_EQUAL(coins.mapCoinsWritten.size(), 0U);
     coinsCache.Flush();
     BOOST_CHECK_EQUAL(coins.mapCoinsWritten.size(), 4U);
-    BOOST_CHECK_EQUAL(coins.mapCoinsWritten[outpoint].flags, CCoinsCacheEntry::DIRTY | CCoinsCacheEntry::FRESH | CCoinsCacheEntry::PEGIN);
+    BOOST_CHECK_EQUAL(coins.mapCoinsWritten[outpoint].GetFlags(), CCoinsCacheEntry::DIRTY | CCoinsCacheEntry::FRESH | CCoinsCacheEntry::PEGIN);
     BOOST_CHECK_EQUAL(coins.mapCoinsWritten[outpoint].peginSpent, true);
-    BOOST_CHECK_EQUAL(coins.mapCoinsWritten[outpoint2].flags, CCoinsCacheEntry::FRESH | CCoinsCacheEntry::PEGIN);
+    BOOST_CHECK_EQUAL(coins.mapCoinsWritten[outpoint2].GetFlags(), CCoinsCacheEntry::FRESH | CCoinsCacheEntry::PEGIN);
     BOOST_CHECK_EQUAL(coins.mapCoinsWritten[outpoint2].peginSpent, false);
-    BOOST_CHECK_EQUAL(coins.mapCoinsWritten[outpoint3].flags, CCoinsCacheEntry::DIRTY | CCoinsCacheEntry::FRESH | CCoinsCacheEntry::PEGIN);
+    BOOST_CHECK_EQUAL(coins.mapCoinsWritten[outpoint3].GetFlags(), CCoinsCacheEntry::DIRTY | CCoinsCacheEntry::FRESH | CCoinsCacheEntry::PEGIN);
     BOOST_CHECK_EQUAL(coins.mapCoinsWritten[outpoint3].peginSpent, true);
-    BOOST_CHECK_EQUAL(coins.mapCoinsWritten[outpoint4].flags, CCoinsCacheEntry::DIRTY | CCoinsCacheEntry::FRESH | CCoinsCacheEntry::PEGIN);
+    BOOST_CHECK_EQUAL(coins.mapCoinsWritten[outpoint4].GetFlags(), CCoinsCacheEntry::DIRTY | CCoinsCacheEntry::FRESH | CCoinsCacheEntry::PEGIN);
     BOOST_CHECK_EQUAL(coins.mapCoinsWritten[outpoint3].peginSpent, true);
 
     // CCoinsViewCache should lose outpoint2 in BatchWrite logic
     CCoinsViewTester coins2;
     CCoinsViewCache coinsCache2(&coins2);
-    BOOST_CHECK(coinsCache2.BatchWrite(coins.mapCoinsWritten, uint256()));
+    {
+        size_t written_usage{0};
+        for (auto& [key, entry] : coins.mapCoinsWritten) {
+            written_usage += entry.coin.DynamicMemoryUsage();
+        }
+        auto cursor{CoinsViewCacheCursor(written_usage, coins.m_written_sentinel, coins.mapCoinsWritten, /*will_erase=*/true)};
+        BOOST_CHECK(coinsCache2.BatchWrite(cursor, uint256()));
+    }
     coinsCache2.Flush();
     BOOST_CHECK_EQUAL(coins2.mapCoinsWritten.size(), 3U);
-    BOOST_CHECK_EQUAL(coins2.mapCoinsWritten[outpoint].flags, CCoinsCacheEntry::DIRTY | CCoinsCacheEntry::FRESH | CCoinsCacheEntry::PEGIN);
+    BOOST_CHECK_EQUAL(coins2.mapCoinsWritten[outpoint].GetFlags(), CCoinsCacheEntry::DIRTY | CCoinsCacheEntry::FRESH | CCoinsCacheEntry::PEGIN);
     BOOST_CHECK_EQUAL(coins2.mapCoinsWritten[outpoint].peginSpent, true);
-    BOOST_CHECK_EQUAL(coins2.mapCoinsWritten[outpoint3].flags, CCoinsCacheEntry::DIRTY | CCoinsCacheEntry::FRESH | CCoinsCacheEntry::PEGIN);
+    BOOST_CHECK_EQUAL(coins2.mapCoinsWritten[outpoint3].GetFlags(), CCoinsCacheEntry::DIRTY | CCoinsCacheEntry::FRESH | CCoinsCacheEntry::PEGIN);
     BOOST_CHECK_EQUAL(coins2.mapCoinsWritten[outpoint3].peginSpent, true);
-    BOOST_CHECK_EQUAL(coins2.mapCoinsWritten[outpoint4].flags, CCoinsCacheEntry::DIRTY | CCoinsCacheEntry::FRESH | CCoinsCacheEntry::PEGIN);
+    BOOST_CHECK_EQUAL(coins2.mapCoinsWritten[outpoint4].GetFlags(), CCoinsCacheEntry::DIRTY | CCoinsCacheEntry::FRESH | CCoinsCacheEntry::PEGIN);
     BOOST_CHECK_EQUAL(coins2.mapCoinsWritten[outpoint4].peginSpent, true);
 }
 
