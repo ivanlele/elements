@@ -331,6 +331,7 @@ BASE_SCRIPTS = [
     # ELEMENTS: no versionbits in use
     #'feature_versionbits_warning.py',
     'mempool_package_rbf.py',
+    'feature_blocksxor.py',
     'rpc_preciousblock.py',
     'wallet_importprunedfunds.py --legacy-wallet',
     'wallet_importprunedfunds.py --descriptors',
