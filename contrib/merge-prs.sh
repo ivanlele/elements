@@ -3,28 +3,25 @@
 export LC_ALL=C
 set -eo pipefail
 
-# Setup base branch and Bitcoin/Elements remote names.
 BASE_ORIG=merged-master
 BASE="${BASE_ORIG}"
 BITCOIN_UPSTREAM_REMOTE=bitcoin
-export BITCOIN_UPSTREAM="${BITCOIN_UPSTREAM_REMOTE}/master"
+BITCOIN_UPSTREAM="${BITCOIN_UPSTREAM_REMOTE}/master"
 ELEMENTS_UPSTREAM_REMOTE=upstream
-export ELEMENTS_UPSTREAM="${ELEMENTS_UPSTREAM_REMOTE}/master"
+ELEMENTS_UPSTREAM="${ELEMENTS_UPSTREAM_REMOTE}/master"
 
-# START USER CONFIG:
-# Set your target upstream here
+# Set these to whether you want to merge from Bitcoin or Elements
 TARGET_UPSTREAM=$BITCOIN_UPSTREAM
 TARGET_NAME="Bitcoin"
-PR_PREFIX="bitcoin/bitcoin"
 # TARGET_UPSTREAM=$ELEMENTS_UPSTREAM
 # TARGET_NAME="Elements"
-# PR_PREFIX="ElementsProject/elements"
 
-# Set your git worktree location here. This is where the merges will be done, and where you should checkout the merged-master branch.
+# BEWARE: On some systems /tmp/ gets periodically cleaned, which may cause
+#   random files from this directory to disappear based on timestamp, and
+#   make git very confused
 WORKTREE="/home/ivan/blockstream/elements-worktree"
+#mkdir -p "${HOME}/.tmp"
 
-# Set your parallellism during build/test. You probably want as many cores as possible.
-# Parallel functional tests can somewhat exceed your core count, depends on the build machine CPU/RAM.
 PARALLEL_BUILD=15  # passed to make -j
 PARALLEL_TEST=30  # passed to test_runner.py --jobs
 PARALLEL_FUZZ=12  # passed to test_runner.py -j when fuzzing
@@ -48,6 +45,9 @@ DO_BUILD=1
 KEEP_GOING=1
 DO_TEST=1
 DO_FUZZ=0
+DO_CHERRY=0
+UNDO_CHERRY=0
+ANALYZE=0
 NUM=15
 COUNT=0
 
@@ -165,10 +165,14 @@ notify () {
 ## Sort by unix timestamp and iterate over them
 echo "$COMMITS" | tac | while read -r line
 do
+    ## Skip empty lines (e.g. when there are no commits to process)
+    [[ -z "$line" ]] && continue
+
     ## Extract data and output what we're doing
     HASH=$(echo "$line" | cut -d ' ' -f 3)
     CHAIN=$(echo "$line" | cut -d ' ' -f 4)
-    PR_ID=$(echo "$line" | grep -o -P "#\d+")
+    PR_ID=$(echo "$line" | grep -o -P "#\d+" || true)
+    REPO=$(echo "$line" | grep -o -P '\S+(?=\s*#\d+)' || true)
 
 	GIT_HEAD=$(git rev-parse HEAD)
 
@@ -183,7 +187,7 @@ do
         # CRITICAL_FILES=("src/wallet/spend.h", "src/wallet/spend.cpp")
         MERGE_FILE="/tmp/$HASH.merge"
         DIFF_FILE="/tmp/$HASH.diff"
-        git -C "$WORKTREE" merge "$HASH" --no-ff -m "Merge $HASH into merged_master ($CHAIN PR $PR_PREFIX$PR_ID)" > "$MERGE_FILE" || true
+        git -C "$WORKTREE" merge "$HASH" --no-ff -m "Merge $HASH into merged_master ($CHAIN PR $REPO$PR_ID)" > "$MERGE_FILE" || true
         git -C "$WORKTREE" diff > "$DIFF_FILE"
         git -C "$WORKTREE" reset --hard "$GIT_HEAD" > /dev/null
         # FILES=$(grep "CONFLICT" "$MERGE_FILE")
@@ -220,7 +224,7 @@ do
         echo -e "Continuing build of \e[37m$PR_ID\e[0m at $(date)"
     else
         echo -e "Start merge/build of \e[37m$PR_ID\e[0m at $(date)"
-        git -C "$WORKTREE" merge "$HASH" --no-ff -m "Merge $HASH into merged_master ($CHAIN PR $PR_PREFIX$PR_ID)" || notify "fail merge" 1
+        git -C "$WORKTREE" merge "$HASH" --no-ff -m "Merge $HASH into merged_master ($CHAIN PR $REPO$PR_ID)" || notify "fail merge" 1
     fi
 
     if [[ "$DO_BUILD" == "1" ]]; then
