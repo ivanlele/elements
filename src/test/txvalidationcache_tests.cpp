@@ -131,13 +131,9 @@ static void ValidateCheckInputsForAllFlags(const CTransaction &tx, uint32_t fail
         TxValidationState state;
 
         // Randomly selects flag combinations
-        //
-        // ELEMENTS
-        // Upstream bitcoin uses SCRIPT_VERIFY_END_MARKER, but this will break the bitcoin tests, because
-        // of some extra elements flags that have been added.
-        // SCRIPT_VERIFY_DISCOURAGE_UPGRADABLE_PUBKEYTYPE is the highest non-elements flag.
-        // FIXME: Adjust this test to work with the extra elements flags.
-        uint32_t test_flags = (uint32_t) insecure_rand.randrange((SCRIPT_VERIFY_DISCOURAGE_UPGRADABLE_PUBKEYTYPE - 1) << 1);
+        uint32_t test_flags = (uint32_t) insecure_rand.randrange((SCRIPT_VERIFY_END_MARKER - 1) << 1);
+        // ELEMENTS: Turn off non-standard Bitcoin flags
+        test_flags &= ~(SCRIPT_NO_SIGHASH_BYTE | SCRIPT_SIGHASH_RANGEPROOF | SCRIPT_VERIFY_SIMPLICITY);
 
         // Filter out incompatible flag choices
         if ((test_flags & SCRIPT_VERIFY_CLEANSTACK)) {
