@@ -14,6 +14,7 @@ from test_framework.mempool_util import fill_mempool
 from test_framework.util import (
     assert_greater_than_or_equal,
     assert_equal,
+    get_fee,
 )
 from test_framework.wallet import (
     DEFAULT_FEE,
@@ -170,8 +171,9 @@ class PackageRBFTest(BitcoinTestFramework):
         self.log.info("Check replacement pays for incremental bandwidth")
         _, placeholder_txns3 = self.create_simple_package(coin)
         package_3_size = sum([tx.get_vsize() for tx in placeholder_txns3])
-        # FIXME: ELEMENTS; anti-DoS fees are lower in elements, maybe we need to investigate this   
-        incremental_sats_required = (Decimal(package_3_size) / COIN) / 10
+        # ELEMENTS: Query the node's actual incremental relay fee
+        incremental_relay_fee = node.getmempoolinfo()["incrementalrelayfee"]
+        incremental_sats_required = get_fee(package_3_size, incremental_relay_fee)
         incremental_sats_short = incremental_sats_required - Decimal("0.0000001")
         # Recreate the package with slightly higher fee once we know the size of the new package, but still short of required fee
         failure_package_hex3, failure_package_txns3 = self.create_simple_package(coin, parent_fee=DEFAULT_FEE, child_fee=DEFAULT_CHILD_FEE + incremental_sats_short)
