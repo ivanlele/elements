@@ -208,7 +208,7 @@ void MinerTestingSetup::TestPackageSelection(const CScript& scriptPubKey, const 
     tx_mempool.addUnchecked(entry.Fee(10000).FromTx(tx));
     pblocktemplate = AssemblerForTest(tx_mempool).CreateNewBlock(scriptPubKey);
     BOOST_REQUIRE_EQUAL(pblocktemplate->block.vtx.size(), 9U);
-    // BOOST_CHECK(pblocktemplate->block.vtx[8]->GetHash() == hashLowFeeTx2); // ELEMENTS: FIXME failing assertion
+    BOOST_CHECK(pblocktemplate->block.vtx[6]->GetHash() == hashLowFeeTx2);
 }
 
 void MinerTestingSetup::TestBasicMining(const CScript& scriptPubKey, const std::vector<CTransactionRef>& txFirst, int baseheight)
