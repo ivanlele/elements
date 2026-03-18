@@ -410,7 +410,7 @@ BOOST_AUTO_TEST_CASE(script_standard_taproot_builder)
 
 BOOST_AUTO_TEST_CASE(bip341_spk_test_vectors)
 {
-    // using control_set = decltype(TaprootSpendData::scripts)::mapped_type;
+    using control_set = decltype(TaprootSpendData::scripts)::mapped_type;
 
     UniValue tests;
     tests.read(json_tests::bip341_wallet_vectors);
@@ -435,18 +435,17 @@ BOOST_AUTO_TEST_CASE(bip341_spk_test_vectors)
         };
         parse_tree(vec["given"]["scriptTree"], 0);
         spktest.Finalize(XOnlyPubKey(ParseHex(vec["given"]["internalPubkey"].get_str())));
-        // ELEMENTS: FIXME
-        // BOOST_CHECK_EQUAL(HexStr(GetScriptForDestination(spktest.GetOutput())), vec["expected"]["scriptPubKey"].get_str());
-        // BOOST_CHECK_EQUAL(EncodeDestination(spktest.GetOutput()), vec["expected"]["bip350Address"].get_str());
+        BOOST_CHECK_EQUAL(HexStr(GetScriptForDestination(spktest.GetOutput())), vec["expected"]["scriptPubKey"].get_str());
+        BOOST_CHECK_EQUAL(EncodeDestination(spktest.GetOutput()), vec["expected"]["bip350Address"].get_str());
         auto spend_data = spktest.GetSpendData();
         BOOST_CHECK_EQUAL(vec["intermediary"]["merkleRoot"].isNull(), spend_data.merkle_root.IsNull());
         if (!spend_data.merkle_root.IsNull()) {
-            // BOOST_CHECK_EQUAL(vec["intermediary"]["merkleRoot"].get_str(), HexStr(spend_data.merkle_root));
+            BOOST_CHECK_EQUAL(vec["intermediary"]["merkleRoot"].get_str(), HexStr(spend_data.merkle_root));
         }
         BOOST_CHECK_EQUAL(spend_data.scripts.size(), scriptposes.size());
-        // for (const auto& scriptpos : scriptposes) {
-        //     BOOST_CHECK(spend_data.scripts[scriptpos.first] == control_set{ParseHex(vec["expected"]["scriptPathControlBlocks"][scriptpos.second].get_str())});
-        // }
+        for (const auto& scriptpos : scriptposes) {
+            BOOST_CHECK(spend_data.scripts[scriptpos.first] == control_set{ParseHex(vec["expected"]["scriptPathControlBlocks"][scriptpos.second].get_str())});
+        }
     }
 }
 
