@@ -553,7 +553,6 @@ class MempoolTRUC(BitcoinTestFramework):
                 node.sendrawtransaction(item["hex"])
         self.check_mempool(txids_v2_100 + [tx_v3_parent["txid"], tx_v3_child_1["txid"]])
 
-        # ELEMENTS FIXME: check correctness here, in bitcoin it is 4000000, but for some reason in elements it is 5556000.
         # Replacing 100 transactions is fine
         tx_v3_replacement_only = self.wallet.create_self_transfer_multi(utxos_to_spend=utxos_for_conflict, fee_per_output=5556000)
         # Override maxfeerate - it costs a lot to replace these 100 transactions.
@@ -577,7 +576,6 @@ class MempoolTRUC(BitcoinTestFramework):
         tx_unrelated_replacee = self.wallet.send_self_transfer(from_node=node, utxo_to_spend=utxo_unrelated_conflict)
         assert tx_unrelated_replacee["txid"] in node.getrawmempool()
 
-        # ELEMENTS FIXME: check correctness here, in bitcoin you also do tx_v3_child_2["fee"] * COIN (maybe because it returns "0.001"?, but in elements it returns "1000")
         fee_to_beat = max(int(tx_v3_child_2["fee"]), int(tx_unrelated_replacee["fee"]))
 
         tx_v3_child_3 = self.wallet.create_self_transfer_multi(
