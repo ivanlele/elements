@@ -2024,7 +2024,7 @@ struct PartiallySignedTransaction
                     // Make sure that all scriptSigs and scriptWitnesses are empty
                     for (unsigned int i = 0; i < tx->vin.size(); i++) {
                         const CTxIn& txin = tx->vin[i];
-                        if (!txin.scriptSig.empty() || !tx->witness.vtxinwit[i].scriptWitness.IsNull()) {
+                        if (!txin.scriptSig.empty() || (i < tx->witness.vtxinwit.size() && !tx->witness.vtxinwit[i].scriptWitness.IsNull())) {
                             throw std::ios_base::failure("Unsigned tx does not have empty scriptSigs and scriptWitnesses.");
                         }
                     }

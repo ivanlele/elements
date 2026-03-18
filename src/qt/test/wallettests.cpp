@@ -447,7 +447,7 @@ void TestGUIWatchOnly(interfaces::Node& node, TestChain100Setup& test)
     QVERIFY(decoded_psbt);
     PartiallySignedTransaction psbt;
     std::string err;
-    // QVERIFY(DecodeRawPSBT(psbt, MakeByteSpan(*decoded_psbt), err)); // ELEMENTS FIXME: psbt
+    QVERIFY(DecodeRawPSBT(psbt, MakeByteSpan(*decoded_psbt), err));
 }
 
 void TestGUI(interfaces::Node& node)
