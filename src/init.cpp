@@ -1307,7 +1307,6 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
     }
 
     ValidationCacheSizes validation_cache_sizes{};
-//    ApplyArgsManOptions(args, validation_cache_sizes);
     if (!InitRangeproofCache(validation_cache_sizes.rangeproof_cache_bytes)
         || !InitSurjectionproofCache(validation_cache_sizes.surjectionproof_execution_cache_bytes))
     {

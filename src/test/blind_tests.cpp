@@ -8,6 +8,7 @@
 #include <random.h>
 #include <uint256.h>
 #include <validation.h>
+#include <script/sigcache.h>
 
 #include <test/util/setup_common.h>
 
@@ -26,6 +27,9 @@ BOOST_FIXTURE_TEST_SUITE(blind_tests, ElementsSetup)
 
 BOOST_AUTO_TEST_CASE(naive_blinding_test)
 {
+    BOOST_CHECK(InitRangeproofCache(DEFAULT_VALIDATION_CACHE_BYTES / 4));
+    BOOST_CHECK(InitSurjectionproofCache(DEFAULT_VALIDATION_CACHE_BYTES / 4));
+
     CKey key1;
     CKey key2;
     CKey keyDummy;
@@ -126,8 +130,7 @@ BOOST_AUTO_TEST_CASE(naive_blinding_test)
         BOOST_CHECK(BlindTransaction(input_blinds, input_asset_blinds, input_assets, input_amounts, output_blinds, output_asset_blinds, output_pubkeys, vDummy, vDummy, tx3) == 2);
         BOOST_CHECK(!tx3.vout[0].nValue.IsExplicit());
         BOOST_CHECK(!tx3.vout[2].nValue.IsExplicit());
-        // ELEMENTS: FIXME: memory access violation: invalid permissions. range/surjection proof sig caching. 
-        //BOOST_CHECK(VerifyAmounts(inputs, CTransaction(tx3), nullptr, false));
+        BOOST_CHECK(VerifyAmounts(inputs, CTransaction(tx3), nullptr, false));
 
         CAmount unblinded_amount;
         BOOST_CHECK(UnblindConfidentialPair(key2, tx3.vout[0].nValue, tx3.vout[0].nAsset, tx3.vout[0].nNonce, op_true, tx3.witness.vtxoutwit[0].vchRangeproof, unblinded_amount, blind3, unblinded_id, asset_blind) == 0);
@@ -232,9 +235,7 @@ BOOST_AUTO_TEST_CASE(naive_blinding_test)
         BOOST_CHECK(!tx4.vout[0].nValue.IsExplicit());
         BOOST_CHECK(tx4.vout[1].nValue.IsExplicit());
         BOOST_CHECK(!tx4.vout[2].nValue.IsExplicit());
-        // This one broken
-        // ELEMENTS: FIXME: memory access violation: invalid permissions. range/surjection proof sig caching. 
-        // BOOST_CHECK(VerifyAmounts(inputs, CTransaction(tx4), nullptr, false));
+        BOOST_CHECK(VerifyAmounts(inputs, CTransaction(tx4), nullptr, false));
 
         CAmount unblinded_amount;
         CAsset asset_out;
@@ -334,8 +335,7 @@ BOOST_AUTO_TEST_CASE(naive_blinding_test)
         // Blind transaction, verify amounts
         txtemp = tx5;
         BOOST_CHECK(BlindTransaction(input_blinds, input_asset_blinds, input_assets, input_amounts, output_blinds, output_asset_blinds, output_pubkeys, vDummy, vDummy, txtemp) == 4);
-        // ELEMENTS: FIXME: memory access violation: invalid permissions. range/surjection proof sig caching. 
-        // BOOST_CHECK(VerifyAmounts(inputs, CTransaction(txtemp), nullptr, false));
+        BOOST_CHECK(VerifyAmounts(inputs, CTransaction(txtemp), nullptr, false));
 
         // Transaction may not have spendable 0-value output
         txtemp.vout.emplace_back(CAsset(), 0, CScript() << OP_TRUE);

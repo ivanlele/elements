@@ -44,9 +44,6 @@ void initialize_simplicity_tx()
     g_con_elementsmode = true;
     // Copied from init.cpp AppInitMain
     kernel::ValidationCacheSizes validation_cache_sizes{};
-    // ELEMENTS: FIXME: range/surjection proof sig caching. 
-//    Assert(InitSignatureCache(validation_cache_sizes.signature_cache_bytes));
-//    Assert(InitScriptExecutionCache(validation_cache_sizes.script_execution_cache_bytes));
     Assert(InitRangeproofCache(validation_cache_sizes.rangeproof_cache_bytes));
     Assert(InitSurjectionproofCache(validation_cache_sizes.surjectionproof_execution_cache_bytes));
 
