@@ -1909,15 +1909,15 @@ std::optional<ChainType> GetNetworkForMagic(const MessageStartChars& message)
     const auto liquidtestnet_msg = CChainParams::LiquidTestNet({}, {}, {})->MessageStart();
     const auto custom_msg = CChainParams::Custom(ChainTypeMetaFrom(ChainType::CUSTOM), {}, {})->MessageStart();
 
-    if (std::equal(message.begin(), message.end(), mainnet_msg.data())) {
+    if (std::ranges::equal(message, mainnet_msg)) {
         return ChainType::MAIN;
-    } else if (std::equal(message.begin(), message.end(), testnet_msg.data())) {
+    } else if (std::ranges::equal(message, testnet_msg)) {
         return ChainType::TESTNET;
-    } else if (std::equal(message.begin(), message.end(), testnet4_msg.data())) {
+    } else if (std::ranges::equal(message, testnet4_msg)) {
         return ChainType::TESTNET4;
-    } else if (std::equal(message.begin(), message.end(), regtest_msg.data())) {
+    } else if (std::ranges::equal(message, regtest_msg)) {
         return ChainType::REGTEST;
-    } else if (std::equal(message.begin(), message.end(), signet_msg.data())) {
+    } else if (std::ranges::equal(message, signet_msg)) {
         return ChainType::SIGNET;
     } else if (std::equal(message.begin(), message.end(), liquid1_msg.data())) {
         return ChainType::LIQUID1;
