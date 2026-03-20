@@ -1,6 +1,6 @@
 # macOS Build Guide
 
-**Updated for MacOS [14.4](https://www.apple.com/macos/sonoma/)**
+**Updated for MacOS [14](https://www.apple.com/macos/sonoma/)**
 
 This guide describes how to build elementsd, command-line utilities, and GUI on macOS
 
@@ -121,7 +121,7 @@ The GUI will be able to encode addresses in QR codes unless this feature is expl
 brew install qrencode
 ```
 
-Otherwise, if you don't need QR encoding support, use the `-DWITH_QRENCODE=OFF` option to disable this feature in order to compile the GUI.
+Otherwise, if you don't need QR encoding support, you can pass `-DWITH_QRENCODE=OFF` to disable this feature.
 
 ---
 
@@ -145,7 +145,6 @@ Skip if you do not need this functionality.
 brew install libnatpmp
 ```
 
-Note: UPnP and NAT-PMP support will be compiled in and disabled by default.
 Check out the [further configuration](#further-configuration) section for more information.
 
 ---
@@ -159,7 +158,6 @@ Skip if you do not need ZMQ functionality.
 brew install zeromq
 ```
 
-ZMQ is automatically compiled in and enabled if the dependency is detected.
 Check out the [further configuration](#further-configuration) section for more information.
 
 For more information on ZMQ, see: [zmq.md](zmq.md)
@@ -241,7 +239,7 @@ cmake --build build --target deploy
 ## Running Elements Core
 
 Elements Core should now be available at `./src/elementsd`.
-If you compiled support for the GUI, it should be available at `./src/qt/elements-qt`.
+If you compiled support for the GUI, it should be available at `./build/src/qt/elements-qt`.
 
 The first time you run `elementsd` or `elements-qt`, it will start downloading the blockchain.
 This process could take many hours, or even days on slower than average systems.
