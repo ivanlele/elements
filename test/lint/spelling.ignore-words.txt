@@ -1,7 +1,6 @@
 afile
 amountIn
 asend
-ba
 blockin
 bu
 cachable
@@ -14,9 +13,9 @@ fo
 fpr
 hashIn
 hights
-inflight
+incomin
 invokable
-inflight
+incomin
 keypair
 lief
 mor
@@ -24,6 +23,7 @@ mut
 nd
 nin
 outIn
+re-use
 requestor
 ser
 siz
@@ -33,7 +33,6 @@ unser
 useable
 validata
 viewIn
-warmup
 wit
 xwindows
 te
