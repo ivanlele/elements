@@ -176,7 +176,7 @@ def check_script(script):
 
 def bech32_to_bytes(address):
     hrp = address.split('1')[0]
-    if hrp not in ['bc', 'tb', 'bcrt']:
+    if hrp not in ['bc', 'tb', 'bcrt', 'ert']:
         return (None, None)
     version, payload = decode_segwit_address(hrp, address)
     if version is None:
