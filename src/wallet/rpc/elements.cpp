@@ -367,10 +367,12 @@ RPCHelpMan initpegoutwallet()
 
     FlatSigningProvider provider;
     std::string error;
-    auto desc = Parse(bitcoin_desc, provider, error); // don't require checksum
-    if (!desc) {
+    auto descs = Parse(bitcoin_desc, provider, error); // don't require checksum
+    if (descs.empty()) {
         throw JSONRPCError(RPC_INVALID_PARAMETER, error);
-    } else if (!desc->IsRange()) {
+    }
+    auto& desc = descs.at(0);
+    if (!desc->IsRange()) {
         throw JSONRPCError(RPC_INVALID_PARAMETER, "bitcoin_descriptor must be a ranged descriptor.");
     }
 
@@ -637,7 +639,7 @@ RPCHelpMan sendtomainchain_pak()
 
     FlatSigningProvider provider;
     std::string error;
-    auto descriptor = Parse(pwallet->offline_desc, provider, error);
+    auto descriptors = Parse(pwallet->offline_desc, provider, error);
 
     LegacyScriptPubKeyMan* spk_man = pwallet->GetLegacyScriptPubKeyMan();
     if (!spk_man) {
@@ -645,17 +647,18 @@ RPCHelpMan sendtomainchain_pak()
     }
 
     // If descriptor not previously set, generate it
-    if (!descriptor) {
+    if (descriptors.empty()) {
         std::string offline_desc = "pkh(" + EncodeExtPubKey(xpub) + "0/*)";
         if (!pwallet->SetOfflineDescriptor(offline_desc)) {
             throw JSONRPCError(RPC_WALLET_ERROR, "Couldn't set wallet descriptor for peg-outs.");
         }
 
-        descriptor = Parse(pwallet->offline_desc, provider, error);
-        if (!descriptor) {
+        descriptors = Parse(pwallet->offline_desc, provider, error);
+        if (descriptors.empty()) {
             throw JSONRPCError(RPC_WALLET_ERROR, "descriptor still null. This is a bug in elementsd.");
         }
     }
+    auto& descriptor = descriptors.at(0);
 
     std::string desc_str = pwallet->offline_desc;
     std::string xpub_str = EncodeExtPubKey(xpub);
