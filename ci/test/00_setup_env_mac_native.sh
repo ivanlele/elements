@@ -14,6 +14,7 @@ export GOAL="install"
 # ELEMENTS: add -Wno-error=deprecated-declarations for C++20 deprecation warnings with boost 1.85
 export BITCOIN_CONFIG="\
  -DBUILD_GUI=ON \
+ -DWITH_ZMQ=ON \
  -DWITH_MINIUPNPC=ON \
  -DWITH_NATPMP=ON \
  -DREDUCE_EXPORTS=ON \
