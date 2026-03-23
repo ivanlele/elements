@@ -79,8 +79,8 @@ using node::VerifyLoadedChainstate;
 
 const std::function<std::string(const char*)> G_TRANSLATION_FUN = nullptr;
 
-/** Random context to get unique temp data dirs. Separate from g_insecure_rand_ctx, which can be seeded from a const env var */
-static FastRandomContext g_insecure_rand_ctx_temp_path;
+/** Random context to get unique temp data dirs. Separate from m_rng, which can be seeded from a const env var */
+static FastRandomContext g_rng_temp_path;
 
 std::ostream& operator<<(std::ostream& os, const arith_uint256& num)
 {
@@ -124,7 +124,7 @@ static void ExitFailure(std::string_view str_err)
 }
 
 BasicTestingSetup::BasicTestingSetup(const ChainType chainType, TestOpts opts, const std::string& fedpegscript)
-    : m_path_root{fs::temp_directory_path() / "test_common_" PACKAGE_NAME / g_insecure_rand_ctx_temp_path.rand256().ToString()},
+    : m_path_root{fs::temp_directory_path() / "test_common_" PACKAGE_NAME / g_rng_temp_path.rand256().ToString()},
       m_args{}
 {
     // Hack to allow testing of fedpeg args
@@ -170,7 +170,7 @@ BasicTestingSetup::BasicTestingSetup(const ChainType chainType, TestOpts opts, c
 
     if (!m_node.args->IsArgSet("-testdatadir")) {
         // By default, the data directory has a random name
-        const auto rand_str{g_insecure_rand_ctx_temp_path.rand256().ToString()};
+        const auto rand_str{g_rng_temp_path.rand256().ToString()};
         m_path_root = fs::temp_directory_path() / "test_common_" PACKAGE_NAME / rand_str;
         TryCreateDirectories(m_path_root);
     } else {
@@ -602,7 +602,7 @@ void TestChain100Setup::MockMempoolMinFee(const CFeeRate& target_feerate)
     // Manually create an invalid transaction. Manually set the fee in the CTxMemPoolEntry to
     // achieve the exact target feerate.
     CMutableTransaction mtx = CMutableTransaction();
-    mtx.vin.emplace_back(COutPoint{Txid::FromUint256(g_insecure_rand_ctx.rand256()), 0});
+    mtx.vin.emplace_back(COutPoint{Txid::FromUint256(m_rng.rand256()), 0});
     mtx.vout.emplace_back(CAsset(), 1 * COIN, GetScriptForDestination(WitnessV0ScriptHash(CScript() << OP_TRUE)));
     const auto tx{MakeTransactionRef(mtx)};
     LockPoints lp;
