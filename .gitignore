@@ -15,6 +15,7 @@
 
 # Test cache
 /test/cache/
+/test/config.ini
 
 # Previous releases
 /releases
