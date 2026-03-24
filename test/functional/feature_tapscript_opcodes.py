@@ -6,6 +6,7 @@
 #
 # Test for taproot sighash algorithm with pegins and issuances
 
+from decimal import ROUND_DOWN
 from random import randint
 from test_framework.util import BITCOIN_ASSET_BYTES, assert_raises_rpc_error, satoshi_round
 from test_framework.key import ECKey, compute_xonly_pubkey, generate_privkey, sign_schnorr
@@ -201,7 +202,7 @@ class TapHashPeginTest(BitcoinTestFramework):
                 value = bytes.fromhex(utxo["valuecommitment"])
                 inputs = [value[0:1], value[1:33]]
             else:
-                value = b"\x01" + int(satoshi_round(utxo["value"])*COIN).to_bytes(8, 'little')
+                value = b"\x01" + int(satoshi_round(utxo["value"], rounding=ROUND_DOWN)*COIN).to_bytes(8, 'little')
                 inputs = [value[0:1], value[1:9]]
         if add_spk:
             ver = CScriptOp.decode_op_n(int.from_bytes(spk[0:1], 'little'))

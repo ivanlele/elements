@@ -14,7 +14,7 @@ sends the money to the desired recipient (and that the recipient is able
 to receive/spend the money).
 """
 
-from decimal import Decimal
+from decimal import Decimal, ROUND_DOWN
 
 from test_framework.blocktools import COINBASE_MATURITY
 from test_framework.test_framework import BitcoinTestFramework
@@ -75,35 +75,35 @@ class WalletCtTest(BitcoinTestFramework):
 
         # Try to send those coins to yet another wallet, sending a large enough amount
         # that the change output is dropped.
-        amt = satoshi_round(Decimal(0.9995))
+        amt = satoshi_round(Decimal(0.9995), rounding=ROUND_DOWN)
         self.test_send(amt, 1, 2, True)
 
         # Repeat, sending to a non-confidential output
-        amt = satoshi_round(Decimal(amt - Decimal(0.00035)))
+        amt = satoshi_round(Decimal(amt - Decimal(0.00035)), rounding=ROUND_DOWN)
         self.test_send(amt, 2, 1, False)
 
         # Again, sending from non-confidential to non-confidential
-        amt = satoshi_round(Decimal(amt - Decimal(0.00033)))
+        amt = satoshi_round(Decimal(amt - Decimal(0.00033)), rounding=ROUND_DOWN)
         self.test_send(amt, 1, 2, False)
 
         # Finally sending from non-confidential to confidential
-        amt = satoshi_round(Decimal(amt - Decimal(0.0005)))
+        amt = satoshi_round(Decimal(amt - Decimal(0.0005)), rounding=ROUND_DOWN)
         self.test_send(amt, 2, 1, True)
 
         # Then send the coins again to make sure they're spendable
-        amt = satoshi_round(Decimal(amt - Decimal(0.0005)))
+        amt = satoshi_round(Decimal(amt - Decimal(0.0005)), rounding=ROUND_DOWN)
         self.test_send(amt, 1, 2, True)
 
         addresses = [ self.nodes[1].getnewaddress() for i in range(15) ] \
             + [ self.nodes[2].getnewaddress() for i in range(15) ]
-        txid = self.nodes[2].sendmany(amounts={address: satoshi_round(Decimal(0.00025)) for address in addresses})
+        txid = self.nodes[2].sendmany(amounts={address: satoshi_round(Decimal(0.00025), rounding=ROUND_DOWN) for address in addresses})
         self.log.info(f"Sent many small UTXOs to nodes 1 and 2 in {txid}")
         self.generate(self.nodes[2], 2)
         self.sync_all()
 
         self.log.info(f"Issuing some assets from node 1")
         # Try issuing assets
-        amt = satoshi_round(Decimal(1))
+        amt = satoshi_round(Decimal(1), rounding=ROUND_DOWN)
         res1 = self.nodes[1].issueasset(amt, amt, True)
         res2 = self.nodes[1].issueasset(amt, amt, False)
 
