@@ -28,6 +28,12 @@ function(create_test_config)
   set_configure_variable(WITH_USDT ENABLE_USDT_TRACEPOINTS)
 
   configure_file(config.ini.in config.ini @ONLY)
+
+  # Create a symlink in the source tree so that tests can also be run
+  # directly from the source directory (e.g. ./test/functional/test_runner.py).
+  if(NOT CMAKE_HOST_WIN32)
+    file(CREATE_LINK ${CMAKE_CURRENT_BINARY_DIR}/config.ini ${CMAKE_CURRENT_SOURCE_DIR}/config.ini SYMBOLIC)
+  endif()
 endfunction()
 
 create_test_config()
