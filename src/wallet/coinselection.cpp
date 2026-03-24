@@ -818,7 +818,7 @@ util::Result<SelectionResult> KnapsackSolver(std::vector<OutputGroup>& groups, c
             }
             result.AddInput(inner_result.value());
         } else {
-            LogPrint(BCLog::SELECTCOINS, "Not enough funds to create target %d for asset %s\n", it->second, it->first.GetHex());
+            LogDebug(BCLog::SELECTCOINS, "Not enough funds to create target %d for asset %s\n", it->second, it->first.GetHex());
             return util::Error();
         }
     }
@@ -863,7 +863,7 @@ util::Result<SelectionResult> KnapsackSolver(std::vector<OutputGroup>& groups, c
         if (auto inner_result = KnapsackSolver(inner_groups, policy_target, change_target, rng, max_selection_weight, ::policyAsset)) {
             result.AddInput(*inner_result);
         } else {
-            LogPrint(BCLog::SELECTCOINS, "Not enough funds to create target %d for policy asset %s\n", policy_target, ::policyAsset.GetHex());
+            LogDebug(BCLog::SELECTCOINS, "Not enough funds to create target %d for policy asset %s\n", policy_target, ::policyAsset.GetHex());
             return util::Error();
         }
     }
@@ -963,7 +963,7 @@ util::Result<SelectionResult> KnapsackSolver(std::vector<OutputGroup>& groups, c
                     log_message += strprintf("%s ", FormatMoney(applicable_groups[i].m_value));
                 }
             }
-            LogPrint(BCLog::SELECTCOINS, "%stotal %s\n", log_message, FormatMoney(nBest));
+            LogDebug(BCLog::SELECTCOINS, "%stotal %s\n", log_message, FormatMoney(nBest));
         }
     }
     Assume(result.GetWeight() <= max_selection_weight);
