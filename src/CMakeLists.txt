@@ -44,7 +44,7 @@ endif()
 message("")
 message("Configuring secp256k1 subtree...")
 set(SECP256K1_DISABLE_SHARED ON CACHE BOOL "" FORCE)
-set(SECP256K1_ENABLE_MODULE_ECDH OFF CACHE BOOL "" FORCE)
+set(SECP256K1_ENABLE_MODULE_ECDH ON CACHE BOOL "" FORCE)
 set(SECP256K1_ENABLE_MODULE_RECOVERY ON CACHE BOOL "" FORCE)
 set(SECP256K1_BUILD_BENCHMARK OFF CACHE BOOL "" FORCE)
 set(SECP256K1_BUILD_TESTS ${BUILD_TESTS} CACHE BOOL "" FORCE)
@@ -74,15 +74,57 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS OFF)
 add_subdirectory(secp256k1)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 string(APPEND CMAKE_C_COMPILE_OBJECT " ${APPEND_CPPFLAGS} ${APPEND_CFLAGS}")
-
+#=============================
+# Elements simplicity library
+#=============================
+enable_language(C)
+add_library(elementssimplicity STATIC EXCLUDE_FROM_ALL
+  simplicity/bitstream.c
+  simplicity/dag.c
+  simplicity/deserialize.c
+  simplicity/eval.c
+  simplicity/frame.c
+  simplicity/jets-secp256k1.c
+  simplicity/jets.c
+  simplicity/rsort.c
+  simplicity/sha256.c
+  simplicity/type.c
+  simplicity/typeInference.c
+  simplicity/elements/cmr.c
+  simplicity/elements/env.c
+  simplicity/elements/exec.c
+  simplicity/elements/elementsJets.c
+  simplicity/elements/ops.c
+  simplicity/elements/primitive.c
+  simplicity/elements/txEnv.c
+)
+target_include_directories(elementssimplicity
+  PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/simplicity/include
+  PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/simplicity
+)
+target_compile_definitions(elementssimplicity PRIVATE PRODUCTION)
+# Simplicity requires assertions; remove NDEBUG that cmake adds for optimized builds.
+target_compile_options(elementssimplicity PRIVATE -UNDEBUG)
+target_link_libraries(elementssimplicity
+  PRIVATE
+    core_interface
+)
 # Stable, backwards-compatible consensus functionality.
 add_library(bitcoin_consensus STATIC EXCLUDE_FROM_ALL
   arith_uint256.cpp
+  asset.cpp
   consensus/merkle.cpp
   consensus/tx_check.cpp
   hash.cpp
   primitives/block.cpp
+  primitives/confidential.cpp
+  primitives/txwitness.cpp
   primitives/transaction.cpp
+  primitives/bitcoin/block.cpp
+  primitives/bitcoin/merkleblock.cpp
+  primitives/bitcoin/transaction.cpp
   pubkey.cpp
   script/interpreter.cpp
   script/script.cpp
@@ -93,6 +135,7 @@ target_link_libraries(bitcoin_consensus
   PRIVATE
     core_interface
     bitcoin_crypto
+    elementssimplicity
     secp256k1
 )
 
@@ -104,8 +147,13 @@ endif()
 # Similar to `bitcoin_util` library, but higher-level.
 add_library(bitcoin_common STATIC EXCLUDE_FROM_ALL
   addresstype.cpp
+  assetsdir.cpp
   base58.cpp
   bech32.cpp
+  blech32.cpp
+  blind.cpp
+  blindpsbt.cpp
+  block_proof.cpp
   chainparams.cpp
   chainparamsbase.cpp
   coins.cpp
@@ -126,6 +174,7 @@ add_library(bitcoin_common STATIC EXCLUDE_FROM_ALL
   deploymentinfo.cpp
   external_signer.cpp
   init/common.cpp
+  issuance.cpp
   kernel/chainparams.cpp
   key.cpp
   key_io.cpp
@@ -145,6 +194,7 @@ add_library(bitcoin_common STATIC EXCLUDE_FROM_ALL
   rpc/util.cpp
   scheduler.cpp
   script/descriptor.cpp
+  script/pegins.cpp
   script/miniscript.cpp
   script/parsing.cpp
   script/sign.cpp
@@ -169,20 +219,17 @@ if(ENABLE_WALLET)
   add_subdirectory(wallet)
 
   if(BUILD_WALLET_TOOL)
-    add_executable(bitcoin-wallet
+    add_executable(elements-wallet
       bitcoin-wallet.cpp
       init/bitcoin-wallet.cpp
       wallet/wallettool.cpp
     )
-    add_windows_resources(bitcoin-wallet bitcoin-wallet-res.rc)
-    target_link_libraries(bitcoin-wallet
+    add_windows_resources(elements-wallet bitcoin-wallet-res.rc)
+    target_link_libraries(elements-wallet
       core_interface
-      bitcoin_wallet
-      bitcoin_common
-      bitcoin_util
-      Boost::headers
+      "$<LINK_GROUP:RESCAN,bitcoin_node,bitcoin_wallet,bitcoin_common>"
     )
-    list(APPEND installable_targets bitcoin-wallet)
+    list(APPEND installable_targets elements-wallet)
   endif()
 endif()
 
@@ -195,8 +242,11 @@ add_library(bitcoin_node STATIC EXCLUDE_FROM_ALL
   bip324.cpp
   blockencodings.cpp
   blockfilter.cpp
+  block_proof.cpp
   chain.cpp
+  confidential_validation.cpp
   consensus/tx_verify.cpp
+  dynafed.cpp
   dbwrapper.cpp
   deploymentstatus.cpp
   flatfile.cpp
@@ -212,6 +262,7 @@ add_library(bitcoin_node STATIC EXCLUDE_FROM_ALL
   kernel/chain.cpp
   kernel/checks.cpp
   kernel/coinstats.cpp
+  mainchainrpc.cpp
   kernel/context.cpp
   kernel/cs_main.cpp
   kernel/disconnected_transactions.cpp
@@ -249,6 +300,7 @@ add_library(bitcoin_node STATIC EXCLUDE_FROM_ALL
   node/utxo_snapshot.cpp
   node/warnings.cpp
   noui.cpp
+  pegins.cpp
   policy/fees.cpp
   policy/fees_args.cpp
   policy/packages.cpp
@@ -256,6 +308,7 @@ add_library(bitcoin_node STATIC EXCLUDE_FROM_ALL
   policy/settings.cpp
   policy/truc_policy.cpp
   pow.cpp
+  primitives/pak.cpp
   rest.cpp
   rpc/blockchain.cpp
   rpc/fees.cpp
@@ -291,6 +344,7 @@ target_link_libraries(bitcoin_node
     minisketch
     univalue
     Boost::headers
+    elementssimplicity
     $<TARGET_NAME_IF_EXISTS:libevent::libevent>
     $<TARGET_NAME_IF_EXISTS:libevent::pthreads>
     $<TARGET_NAME_IF_EXISTS:NATPMP::NATPMP>
@@ -300,32 +354,32 @@ target_link_libraries(bitcoin_node
 )
 
 
-# Bitcoin Core bitcoind.
+# Elements Core elementsd.
 if(BUILD_DAEMON)
-  add_executable(bitcoind
+  add_executable(elementsd
     bitcoind.cpp
     init/bitcoind.cpp
   )
-  add_windows_resources(bitcoind bitcoind-res.rc)
-  target_link_libraries(bitcoind
+  add_windows_resources(elementsd bitcoind-res.rc)
+  target_link_libraries(elementsd
     core_interface
     bitcoin_node
     $<TARGET_NAME_IF_EXISTS:bitcoin_wallet>
   )
-  list(APPEND installable_targets bitcoind)
+  list(APPEND installable_targets elementsd)
 endif()
 if(WITH_MULTIPROCESS)
-  add_executable(bitcoin-node
+  add_executable(elements-node
     bitcoind.cpp
     init/bitcoin-node.cpp
   )
-  target_link_libraries(bitcoin-node
+  target_link_libraries(elements-node
     core_interface
     bitcoin_node
     bitcoin_ipc
     $<TARGET_NAME_IF_EXISTS:bitcoin_wallet>
   )
-  list(APPEND installable_targets bitcoin-node)
+  list(APPEND installable_targets elements-node)
 endif()
 
 
@@ -340,43 +394,45 @@ target_link_libraries(bitcoin_cli
 )
 
 
-# Bitcoin Core RPC client
+# Elements Core RPC client
 if(BUILD_CLI)
-  add_executable(bitcoin-cli bitcoin-cli.cpp)
-  add_windows_resources(bitcoin-cli bitcoin-cli-res.rc)
-  target_link_libraries(bitcoin-cli
+  add_executable(elements-cli bitcoin-cli.cpp)
+  add_windows_resources(elements-cli bitcoin-cli-res.rc)
+  target_link_libraries(elements-cli
     core_interface
     bitcoin_cli
     bitcoin_common
     bitcoin_util
     $<TARGET_NAME_IF_EXISTS:libevent::libevent>
   )
-  list(APPEND installable_targets bitcoin-cli)
+  list(APPEND installable_targets elements-cli)
 endif()
 
 
 if(BUILD_TX)
-  add_executable(bitcoin-tx bitcoin-tx.cpp)
-  add_windows_resources(bitcoin-tx bitcoin-tx-res.rc)
-  target_link_libraries(bitcoin-tx
+  add_executable(elements-tx bitcoin-tx.cpp)
+  add_windows_resources(elements-tx bitcoin-tx-res.rc)
+  target_link_libraries(elements-tx
     core_interface
     bitcoin_common
     bitcoin_util
     univalue
+    elementssimplicity
   )
-  list(APPEND installable_targets bitcoin-tx)
+  list(APPEND installable_targets elements-tx)
 endif()
 
 
 if(BUILD_UTIL)
-  add_executable(bitcoin-util bitcoin-util.cpp)
-  add_windows_resources(bitcoin-util bitcoin-util-res.rc)
-  target_link_libraries(bitcoin-util
+  add_executable(elements-util bitcoin-util.cpp)
+  add_windows_resources(elements-util bitcoin-util-res.rc)
+  target_link_libraries(elements-util
     core_interface
     bitcoin_common
     bitcoin_util
+    elementssimplicity
   )
-  list(APPEND installable_targets bitcoin-util)
+  list(APPEND installable_targets elements-util)
 endif()
 
 

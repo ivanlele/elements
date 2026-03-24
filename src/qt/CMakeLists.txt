@@ -226,40 +226,40 @@ if(qt_lib_type STREQUAL "STATIC_LIBRARY")
   )
 endif()
 
-add_executable(bitcoin-qt
+add_executable(elements-qt
   main.cpp
   ../init/bitcoin-qt.cpp
 )
 
-add_windows_resources(bitcoin-qt res/bitcoin-qt-res.rc)
+add_windows_resources(elements-qt res/bitcoin-qt-res.rc)
 
-target_link_libraries(bitcoin-qt
+target_link_libraries(elements-qt
   core_interface
   bitcoinqt
   bitcoin_node
 )
 
-import_plugins(bitcoin-qt)
-set(installable_targets bitcoin-qt)
+import_plugins(elements-qt)
+set(installable_targets elements-qt)
 if(WIN32)
-  set_target_properties(bitcoin-qt PROPERTIES WIN32_EXECUTABLE TRUE)
+  set_target_properties(elements-qt PROPERTIES WIN32_EXECUTABLE TRUE)
 endif()
 
 if(WITH_MULTIPROCESS)
-  add_executable(bitcoin-gui
+  add_executable(elements-gui
     main.cpp
     ../init/bitcoin-gui.cpp
   )
-  target_link_libraries(bitcoin-gui
+  target_link_libraries(elements-gui
     core_interface
     bitcoinqt
     bitcoin_node
     bitcoin_ipc
   )
-  import_plugins(bitcoin-gui)
-  list(APPEND installable_targets bitcoin-gui)
+  import_plugins(elements-gui)
+  list(APPEND installable_targets elements-gui)
   if(WIN32)
-    set_target_properties(bitcoin-gui PROPERTIES WIN32_EXECUTABLE TRUE)
+    set_target_properties(elements-gui PROPERTIES WIN32_EXECUTABLE TRUE)
   endif()
 endif()
 

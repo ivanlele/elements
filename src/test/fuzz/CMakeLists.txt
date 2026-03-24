@@ -126,6 +126,10 @@ add_executable(fuzz
   validation_load_mempool.cpp
   vecdeque.cpp
   versionbits.cpp
+  witness_program.cpp
+  simplicity.cpp
+  simplicity_tx.cpp
+  simplicity_compute_amr.c
 )
 target_link_libraries(fuzz
   core_interface
@@ -136,6 +140,7 @@ target_link_libraries(fuzz
   leveldb
   univalue
   secp256k1
+  elementssimplicity
   Boost::headers
   $<TARGET_NAME_IF_EXISTS:libevent::libevent>
 )

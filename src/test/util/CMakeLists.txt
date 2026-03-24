@@ -25,5 +25,6 @@ target_link_libraries(test_util
     core_interface
     Boost::headers
   PUBLIC
+    secp256k1
     univalue
 )

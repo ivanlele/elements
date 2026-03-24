@@ -60,6 +60,7 @@ target_link_libraries(bench_bitcoin
   core_interface
   test_util
   bitcoin_node
+  elementssimplicity
   Boost::headers
 )
 

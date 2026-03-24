@@ -41,6 +41,8 @@ add_executable(test_bitcoin
   bech32_tests.cpp
   bip32_tests.cpp
   bip324_tests.cpp
+  blech32_tests.cpp
+  blind_tests.cpp
   blockchain_tests.cpp
   blockencodings_tests.cpp
   blockfilter_index_tests.cpp
@@ -62,6 +64,7 @@ add_executable(test_bitcoin
   denialofservice_tests.cpp
   descriptor_tests.cpp
   disconnected_transactions.cpp
+  dynafed_tests.cpp
   feefrac_tests.cpp
   flatfile_tests.cpp
   fs_tests.cpp
@@ -89,6 +92,8 @@ add_executable(test_bitcoin
   node_warnings_tests.cpp
   orphanage_tests.cpp
   peerman_tests.cpp
+  pegin_spent_tests.cpp
+  pegin_witness_tests.cpp
   pmt_tests.cpp
   policy_fee_tests.cpp
   policyestimator_tests.cpp
@@ -150,6 +155,7 @@ target_link_libraries(test_bitcoin
   bitcoin_node
   minisketch
   secp256k1
+  elementssimplicity
   Boost::headers
   $<TARGET_NAME_IF_EXISTS:libevent::libevent>
 )

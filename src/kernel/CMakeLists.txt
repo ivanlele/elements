@@ -17,9 +17,16 @@ add_library(bitcoinkernel
   disconnected_transactions.cpp
   mempool_removal_reason.cpp
   ../arith_uint256.cpp
+  ../asset.cpp
+  ../blind.cpp
+  ../blindpsbt.cpp
+  ../block_proof.cpp
   ../chain.cpp
+  ../chainparams.cpp
   ../coins.cpp
+  ../common/bloom.cpp
   ../compressor.cpp
+  ../confidential_validation.cpp
   ../consensus/merkle.cpp
   ../consensus/tx_check.cpp
   ../consensus/tx_verify.cpp
@@ -27,12 +34,17 @@ add_library(bitcoinkernel
   ../dbwrapper.cpp
   ../deploymentinfo.cpp
   ../deploymentstatus.cpp
+  ../dynafed.cpp
   ../flatfile.cpp
   ../hash.cpp
+  ../issuance.cpp
   ../logging.cpp
+  ../mainchainrpc.cpp
+  ../merkleblock.cpp
   ../node/blockstorage.cpp
   ../node/chainstate.cpp
   ../node/utxo_snapshot.cpp
+  ../pegins.cpp
   ../policy/feerate.cpp
   ../policy/packages.cpp
   ../policy/policy.cpp
@@ -40,15 +52,26 @@ add_library(bitcoinkernel
   ../policy/settings.cpp
   ../policy/truc_policy.cpp
   ../pow.cpp
+  ../primitives/bitcoin/block.cpp
+  ../primitives/bitcoin/merkleblock.cpp
+  ../primitives/bitcoin/transaction.cpp
   ../primitives/block.cpp
+  ../primitives/confidential.cpp
+  ../primitives/pak.cpp
   ../primitives/transaction.cpp
+  ../primitives/txwitness.cpp
+  ../psbt.cpp
   ../pubkey.cpp
   ../random.cpp
   ../randomenv.cpp
+  ../rpc/request.cpp
   ../script/interpreter.cpp
+  ../script/pegins.cpp
   ../script/script.cpp
   ../script/script_error.cpp
   ../script/sigcache.cpp
+  ../script/sign.cpp
+  ../script/signingprovider.cpp
   ../script/solver.cpp
   ../signet.cpp
   ../streams.cpp
@@ -84,6 +107,8 @@ target_link_libraries(bitcoinkernel
     bitcoin_crypto
     leveldb
     secp256k1
+    elementssimplicity
+    univalue
   PUBLIC
     Boost::headers
 )
