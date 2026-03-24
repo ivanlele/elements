@@ -10,13 +10,6 @@
 !depends/patches/**/*.patch
 
 /CMakeUserPresets.json
-
-# Autotools build artifacts
-**/.deps/
-**/.libs/
-/autom4te.cache/
-/src/obj/
-
 # Merge script log
 /merge.log
 
