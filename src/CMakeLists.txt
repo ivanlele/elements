@@ -111,7 +111,6 @@ target_link_libraries(elementssimplicity
   PRIVATE
     core_interface
 )
-# Stable, backwards-compatible consensus functionality.
 add_library(bitcoin_consensus STATIC EXCLUDE_FROM_ALL
   arith_uint256.cpp
   asset.cpp
