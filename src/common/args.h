@@ -65,6 +65,7 @@ enum class OptionsCategory {
     ELEMENTS,
     COMMANDS,
     REGISTER_COMMANDS,
+    CLI_COMMANDS,
 
     HIDDEN // Always the last option to avoid printing these in the help
 };
@@ -359,6 +360,13 @@ protected:
         m_available_args.clear();
         m_network_only_args.clear();
     }
+
+    /**
+     * Check CLI command args
+     *
+     * @throws std::runtime_error when multiple CLI_COMMAND arguments are specified
+     */
+    void CheckMultipleCLIArgs() const;
 
     /**
      * Get the help string
