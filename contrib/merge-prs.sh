@@ -22,9 +22,10 @@ TARGET_NAME="Bitcoin"
 WORKTREE="/home/ivan/blockstream/elements-worktree"
 #mkdir -p "${HOME}/.tmp"
 
-PARALLEL_BUILD=15  # passed to make -j
+PARALLEL_BUILD=15  # passed to cmake --build --parallel
 PARALLEL_TEST=30  # passed to test_runner.py --jobs
 PARALLEL_FUZZ=12  # passed to test_runner.py -j when fuzzing
+BUILD_DIR="build"  # out-of-source CMake build directory
 
 # Setup a ccache dir if necessary.
 export CCACHE_DIR="/tmp/ccache"
@@ -230,16 +231,12 @@ do
     if [[ "$DO_BUILD" == "1" ]]; then
         # Clean up
         echo "Cleaning up"
-        # NB: this will fail the first time because there's not yet a makefile
-        quietly make distclean || true
+        rm -rf "$BUILD_DIR"
         quietly git -C "$WORKTREE" clean -xf
-        echo "autogen & configure"
-        quietly ./autogen.sh
-        quietly ./configure --with-incompatible-bdb
-        # The following is an expansion of `make check` that skips the libsecp
-        # tests and also the benchmarks (though it does build them!)
+        echo "CMake configure"
+        quietly cmake -B "$BUILD_DIR" -DBUILD_TESTS=ON -DBUILD_BENCH=ON -DBUILD_GUI=ON -DWITH_BDB=ON -DWARN_INCOMPATIBLE_BDB=OFF
         echo "Building"
-        quietly make -j"$PARALLEL_BUILD" -k || notify "fail build" 1
+        quietly cmake --build "$BUILD_DIR" --parallel "$PARALLEL_BUILD" || notify "fail build" 1
         # todo: fix linting step
         # echo "Linting"
         # quietly ./ci/lint/06_script.sh || notify "fail lint"
@@ -247,24 +244,23 @@ do
 
     if [[ "$DO_TEST" == "1" ]]; then
         echo "Testing"
-        quietly ./src/qt/test/test_elements-qt || notify "fail test qt" 1
-        quietly ./src/test/test_bitcoin || notify "fail test bitcoin" 1
-        quietly ./src/bench/bench_bitcoin || notify "fail test bench" 1
-        quietly ./test/util/test_runner.py || notify "fail test util" 1
-        quietly ./test/util/rpcauth-test.py || notify "fail test rpc" 1
+        quietly "$BUILD_DIR"/src/qt/test/test_elements-qt || notify "fail test qt" 1
+        quietly "$BUILD_DIR"/src/test/test_bitcoin || notify "fail test bitcoin" 1
+        quietly "$BUILD_DIR"/src/bench/bench_bitcoin || notify "fail test bench" 1
+        quietly "$BUILD_DIR"/test/util/test_runner.py || notify "fail test util" 1
+        quietly "$BUILD_DIR"/test/util/rpcauth-test.py || notify "fail test rpc" 1
         echo "Functional testing"
-        quietly ./test/functional/test_runner.py --jobs="$PARALLEL_TEST" || notify "fail test runner" 1
+        quietly "$BUILD_DIR"/test/functional/test_runner.py --jobs="$PARALLEL_TEST" || notify "fail test runner" 1
     fi
 
     if [[ "$DO_FUZZ" == "1" ]]; then
         echo "Cleaning for fuzz"
-        quietly make distclean || true
+        rm -rf "$BUILD_DIR"
         quietly git -C "$WORKTREE" clean -xf
         echo "Building for fuzz"
-        quietly ./autogen.sh
         # TODO turn on `,integer` after this rebase
-        quietly ./configure --enable-fuzz --with-sanitizers=address,fuzzer,undefined CC="ccache clang" CXX="ccache clang++"
-        quietly make -j"$PARALLEL_BUILD" -k
+        quietly cmake -B "$BUILD_DIR" -DBUILD_FOR_FUZZING=ON -DSANITIZERS=address,fuzzer,undefined -DCMAKE_C_COMPILER="ccache clang" -DCMAKE_CXX_COMPILER="ccache clang++"
+        quietly cmake --build "$BUILD_DIR" --parallel "$PARALLEL_BUILD"
         echo "Fuzzing"
         quietly ./test/fuzz/test_runner.py -j"$PARALLEL_FUZZ" "${FUZZ_CORPUS}" || notify "fail fuzz" 1
     fi
