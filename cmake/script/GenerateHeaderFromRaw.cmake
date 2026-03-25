@@ -3,27 +3,38 @@
 # file COPYING or https://opensource.org/license/mit/.
 
 file(READ ${RAW_SOURCE_PATH} hex_content HEX)
-string(REGEX MATCHALL "([A-Za-z0-9][A-Za-z0-9])" bytes "${hex_content}")
+string(LENGTH "${hex_content}" hex_length)
 
-set(header_content "#include <cstddef>\n")
-string(APPEND header_content "#include <span>\n")
-string(APPEND header_content "namespace ${RAW_NAMESPACE} {\n")
 get_filename_component(raw_source_basename ${RAW_SOURCE_PATH} NAME_WE)
-string(APPEND header_content "inline constexpr std::byte detail_${raw_source_basename}_raw[]{\n")
+file(WRITE ${HEADER_PATH}
+  "#include <cstddef>\n"
+  "#include <span>\n"
+  "namespace ${RAW_NAMESPACE} {\n"
+  "inline constexpr std::byte detail_${raw_source_basename}_raw[]{\n"
+)
 
-set(i 0)
-foreach(byte ${bytes})
-  math(EXPR i "${i} + 1")
-  if(i EQUAL 8)
-    set(i 0)
-    string(APPEND header_content "std::byte{0x${byte}},\n")
+set(bytes_per_line 8)
+math(EXPR hex_per_line "${bytes_per_line} * 2")
+set(chunk_bytes 4096)
+math(EXPR chunk_hex "${chunk_bytes} * 2")
+
+set(offset 0)
+while(offset LESS hex_length)
+  math(EXPR remaining "${hex_length} - ${offset}")
+  if(remaining GREATER_EQUAL chunk_hex)
+    set(cur_chunk_size ${chunk_hex})
   else()
-    string(APPEND header_content "std::byte{0x${byte}}, ")
+    set(cur_chunk_size ${remaining})
   endif()
-endforeach()
+  string(SUBSTRING "${hex_content}" ${offset} ${cur_chunk_size} chunk)
+  string(REGEX REPLACE "([0-9a-f][0-9a-f])" "std::byte{0x\\1}," formatted "${chunk}")
+  string(REGEX REPLACE "(std::byte\\{0x[0-9a-f][0-9a-f]\\},)(std::byte\\{0x[0-9a-f][0-9a-f]\\},)(std::byte\\{0x[0-9a-f][0-9a-f]\\},)(std::byte\\{0x[0-9a-f][0-9a-f]\\},)(std::byte\\{0x[0-9a-f][0-9a-f]\\},)(std::byte\\{0x[0-9a-f][0-9a-f]\\},)(std::byte\\{0x[0-9a-f][0-9a-f]\\},)(std::byte\\{0x[0-9a-f][0-9a-f]\\},)" "\\1\\2\\3\\4\\5\\6\\7\\8\n" formatted "${formatted}")
+  file(APPEND ${HEADER_PATH} "${formatted}\n")
+  math(EXPR offset "${offset} + ${cur_chunk_size}")
+endwhile()
 
-string(APPEND header_content "\n};\n")
-string(APPEND header_content "inline constexpr std::span ${raw_source_basename}{detail_${raw_source_basename}_raw};\n")
-string(APPEND header_content "}")
-
-file(WRITE ${HEADER_PATH} "${header_content}")
+file(APPEND ${HEADER_PATH}
+  "};\n"
+  "inline constexpr std::span ${raw_source_basename}{detail_${raw_source_basename}_raw};\n"
+  "}"
+)
