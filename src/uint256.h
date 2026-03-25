@@ -202,9 +202,9 @@ public:
     static const uint256 ONE;
 };
 
-/* uint256 from std::string_view, containing byte-reversed hex encoding.
- * DEPRECATED. Unlike FromHex this accepts any invalid input, thus it is fragile and deprecated!
- */
+/* uint256S is used extensively in Elements for runtime hex-to-uint256
+ * conversion (args, RPC input, etc.). Upstream removed it, but Elements
+ * still needs the lenient parsing behaviour. */
 inline uint256 uint256S(std::string_view str)
 {
     uint256 rv;
