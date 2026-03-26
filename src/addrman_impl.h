@@ -263,9 +263,9 @@ private:
 
     /** Helper to generalize looking up an addrman entry from either table.
      *
-     *  @return  int The nid of the entry. If the addrman position is empty or not found, returns -1.
+     *  @return  nid_type The nid of the entry. If the addrman position is empty or not found, returns -1.
      * */
-    int GetEntry(bool use_tried, size_t bucket, size_t position) const EXCLUSIVE_LOCKS_REQUIRED(cs);
+    nid_type GetEntry(bool use_tried, size_t bucket, size_t position) const EXCLUSIVE_LOCKS_REQUIRED(cs);
 
     std::vector<CAddress> GetAddr_(size_t max_addresses, size_t max_pct, std::optional<Network> network, const bool filtered = true) const EXCLUSIVE_LOCKS_REQUIRED(cs);
 

@@ -758,7 +758,8 @@ std::pair<CAddress, NodeSeconds> AddrManImpl::Select_(bool new_only, const std::
 
         // Iterate over the positions of that bucket, starting at the initial one,
         // and looping around.
-        int i, position, node_id = 0;
+        int i, position;
+        nid_type node_id = 0;
         for (i = 0; i < ADDRMAN_BUCKET_SIZE; ++i) {
             position = (initial_position + i) % ADDRMAN_BUCKET_SIZE;
             node_id = GetEntry(search_tried, bucket, position);
@@ -791,7 +792,7 @@ std::pair<CAddress, NodeSeconds> AddrManImpl::Select_(bool new_only, const std::
     }
 }
 
-int AddrManImpl::GetEntry(bool use_tried, size_t bucket, size_t position) const
+nid_type AddrManImpl::GetEntry(bool use_tried, size_t bucket, size_t position) const
 {
     AssertLockHeld(cs);
 
@@ -854,7 +855,7 @@ std::vector<std::pair<AddrInfo, AddressPosition>> AddrManImpl::GetEntries_(bool 
     std::vector<std::pair<AddrInfo, AddressPosition>> infos;
     for (int bucket = 0; bucket < bucket_count; ++bucket) {
         for (int position = 0; position < ADDRMAN_BUCKET_SIZE; ++position) {
-            int id = GetEntry(from_tried, bucket, position);
+            nid_type id = GetEntry(from_tried, bucket, position);
             if (id >= 0) {
                 AddrInfo info = mapInfo.at(id);
                 AddressPosition location = AddressPosition(
