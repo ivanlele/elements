@@ -10,6 +10,7 @@ export LC_ALL=C.UTF-8
 # Therefore, `--break-system-packages` is needed.
 export PIP_PACKAGES="--break-system-packages zmq"
 export GOAL="install"
+export CMAKE_GENERATOR="Ninja"
 # ELEMENTS: add -fno-stack-check to work around clang bug on macos
 # ELEMENTS: add -Wno-error=deprecated-declarations for C++20 deprecation warnings with boost 1.85
 export BITCOIN_CONFIG="\
