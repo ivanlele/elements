@@ -44,7 +44,6 @@
 #include <span>
 #include <stdint.h>
 #include <string>
-#include <thread>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -1019,7 +1018,6 @@ public:
 
     const util::SignalInterrupt& m_interrupt;
     const Options m_options;
-    std::thread m_thread_load;
     //! A single BlockManager instance is shared across each constructed
     //! chainstate to avoid duplicating block metadata.
     node::BlockManager m_blockman;
