@@ -67,13 +67,8 @@ class MempoolLimitTest(BitcoinTestFramework):
 
         # RBF's tx_A, is not yet submitted
         tx_B = self.wallet.create_self_transfer(
-<<<<<<< HEAD
             fee=Decimal(tx_A["fee"] * 4 / COIN), # ELEMENTS: the fee returned was in sats
-            target_weight=A_weight,
-=======
-            fee=tx_A["fee"] * 4,
             target_vsize=A_vsize,
->>>>>>> fc642c33ef
             utxo_to_spend=rbf_utxo,
             confirmed_only=True
         )

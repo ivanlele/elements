@@ -76,12 +76,7 @@ class MempoolTRUC(BitcoinTestFramework):
             target_vsize=TRUC_CHILD_MAX_VSIZE + 1,
             version=3
         )
-<<<<<<< HEAD
-        print(tx_v3_child_heavy["tx"].get_vsize())
-        assert_greater_than_or_equal(tx_v3_child_heavy["tx"].get_vsize(), 1000)
-=======
         assert_greater_than_or_equal(tx_v3_child_heavy["tx"].get_vsize(), TRUC_CHILD_MAX_VSIZE)
->>>>>>> fc642c33ef
         expected_error_child_heavy = f"TRUC-violation, version=3 child tx {tx_v3_child_heavy['txid']} (wtxid={tx_v3_child_heavy['wtxid']}) is too big"
         assert_raises_rpc_error(-26, expected_error_child_heavy, node.sendrawtransaction, tx_v3_child_heavy["hex"])
         self.check_mempool([tx_v3_parent_normal["txid"]])
@@ -93,11 +88,7 @@ class MempoolTRUC(BitcoinTestFramework):
             from_node=node,
             fee_rate=DEFAULT_FEE,
             utxo_to_spend=tx_v3_parent_normal["new_utxo"],
-<<<<<<< HEAD
-            target_weight=3976, # ELEMENTS
-=======
             target_vsize=TRUC_CHILD_MAX_VSIZE - 3,
->>>>>>> fc642c33ef
             version=3
         )
         assert_greater_than_or_equal(TRUC_CHILD_MAX_VSIZE, tx_v3_child_almost_heavy["tx"].get_vsize())
