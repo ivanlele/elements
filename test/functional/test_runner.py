@@ -125,11 +125,14 @@ BASE_SCRIPTS = [
     'feature_taproot.py',
     'feature_block.py',
     'wallet_elements_regression_1263.py',
+    'p2p_node_network_limited.py --v1transport',
+    'p2p_node_network_limited.py --v2transport',
     # vv Tests less than 2m vv
     # ELEMENTS: no longpolling
     # 'mining_getblocktemplate_longpoll.py',
     'p2p_segwit.py',
     'feature_maxuploadtarget.py',
+    'feature_assumeutxo.py',
     'mempool_updatefromblock.py',
     'mempool_persist.py --descriptors',
     # vv Tests less than 60s vv
@@ -403,8 +406,6 @@ BASE_SCRIPTS = [
     'feature_filelock.py',
     #'feature_loadblock.py', # ELEMENTS: fixme figure out why this doesn't work
     #'p2p_dos_header_tree.py', # ELEMENTS: this test requires connecting to testnet3
-    'feature_assumeutxo.py',
-    'wallet_assumeutxo.py --descriptors',
     'p2p_add_connections.py',
     'feature_bind_port_discover.py',
     'p2p_unrequested_blocks.py',
@@ -435,8 +436,6 @@ BASE_SCRIPTS = [
     'wallet_orphanedreward.py',
     'wallet_send_zero_fee.py',
     'wallet_timelock.py',
-    'p2p_node_network_limited.py --v1transport',
-    'p2p_node_network_limited.py --v2transport',
     'p2p_permissions.py',
     'feature_blocksdir.py',
     'wallet_startup.py',
