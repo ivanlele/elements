@@ -17,7 +17,6 @@ export BITCOIN_CONFIG="\
  -DBUILD_GUI=ON \
  -DWITH_ZMQ=ON \
  -DWITH_MINIUPNPC=ON \
- -DWITH_NATPMP=ON \
  -DREDUCE_EXPORTS=ON \
  -DCMAKE_CXX_FLAGS='-fno-stack-check -Wno-error=deprecated-declarations' \
 "
