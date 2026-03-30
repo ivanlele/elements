@@ -89,6 +89,7 @@ class FullBlockTest(BitcoinTestFramework):
             '-acceptnonstdtxn=1',  # This is a consensus block test, we don't care about tx policy
             '-testactivationheight=bip34@2',
             "-con_bip34height=2", # ELEMENTS
+            '-par=1', # Until https://github.com/bitcoin/bitcoin/issues/30960 is fixed
         ]]
 
     def run_test(self):
@@ -821,7 +822,7 @@ class FullBlockTest(BitcoinTestFramework):
         self.next_block(59)
         tx = self.create_and_sign_transaction(out[17], 51 * COIN)
         b59 = self.update_block(59, [tx])
-        self.send_blocks([b59], success=False, reject_reason='block-validation-failed', reconnect=True)
+        self.send_blocks([b59], success=False, reject_reason='bad-txns-in-ne-out', reconnect=True)
 
         # reset to good chain
         self.move_tip(57)

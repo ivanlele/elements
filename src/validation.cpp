@@ -2442,6 +2442,14 @@ bool CheckInputScripts(const CTransaction& tx, TxValidationState& state,
                 if (check2()) {
                     return state.Invalid(TxValidationResult::TX_NOT_STANDARD, strprintf("non-mandatory-script-verify-flag (%s)", ScriptErrorString(serror)));
                 }
+
+                // If the second check failed, it failed due to a mandatory script verification
+                // flag, but the first check might have failed on a non-mandatory script
+                // verification flag.
+                //
+                // Avoid reporting a mandatory script check failure with a non-mandatory error
+                // string by reporting the error from the second check.
+                serror = check2.GetScriptError();
             }
             // MANDATORY flag failures correspond to
             // TxValidationResult::TX_CONSENSUS. Because CONSENSUS

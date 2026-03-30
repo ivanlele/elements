@@ -191,7 +191,6 @@ class NonexistentInput(BadTxTemplate):
 
 class SpendTooMuch(BadTxTemplate):
     reject_reason = 'bad-txns-in-ne-out'
-    block_reject_reason = 'block-validation-failed'
     expect_disconnect = True
 
     def get_tx(self):
@@ -267,6 +266,19 @@ def getDisabledOpcodeTemplate(opcode):
         'get_tx': get_tx,
         'valid_in_block' : True
         })
+
+class NonStandardAndInvalid(BadTxTemplate):
+    """A non-standard transaction which is also consensus-invalid should return the consensus error."""
+    reject_reason = "mandatory-script-verify-flag-failed (OP_RETURN was encountered)"
+    expect_disconnect = True
+    # ELEMENTS: In the block test context sign_tx() replaces the scriptSig with a valid
+    # P2PK signature, making this tx valid in a block. Skip the block test.
+    valid_in_block = True
+
+    def get_tx(self):
+        return create_tx_with_script(
+            self.spend_tx, 0, script_sig=b'\x00' * 3 + b'\xab\x6a',
+            amount=self.spend_avail)
 
 # Disabled opcode tx templates (CVE-2010-5137)
 # ELEMENTS: many of these are re-enabled
