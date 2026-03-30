@@ -109,6 +109,7 @@ target_link_libraries(bitcoinkernel
     secp256k1
     elementssimplicity
     univalue
+    $<TARGET_NAME_IF_EXISTS:USDT::headers>
   PUBLIC
     Boost::headers
 )
