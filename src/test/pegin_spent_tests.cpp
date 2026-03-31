@@ -60,7 +60,7 @@ BOOST_AUTO_TEST_CASE(PeginSpent_validity)
     //Basic insert of blank outpoint pair, blank COutPoint allows for checking coinsCache
 
     std::pair<uint256, COutPoint> outpoint = std::make_pair(GetRandHash(), COutPoint(Txid::FromUint256(GetRandHash()), 42));
-    BOOST_CHECK(!coinsCache.GetCoin(outpoint.second, ret));
+    BOOST_CHECK(!coinsCache.GetCoin(outpoint.second));
 
     //Checking for pegin spentness should not create an entry
     BOOST_CHECK(!coinsCache.IsPeginSpent(outpoint));
