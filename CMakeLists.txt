@@ -18,7 +18,7 @@ endif()
 #=============================
 # Project / Package metadata
 #=============================
-set(PACKAGE_NAME "Elements Core")
+set(CLIENT_NAME "Elements Core")
 set(CLIENT_VERSION_MAJOR 28)
 set(CLIENT_VERSION_MINOR 99)
 set(CLIENT_VERSION_BUILD 0)
@@ -49,14 +49,14 @@ project(ElementsCore
   LANGUAGES NONE
 )
 
-set(PACKAGE_VERSION ${PROJECT_VERSION})
+set(CLIENT_VERSION_STRING ${PROJECT_VERSION})
 if(CLIENT_VERSION_RC GREATER 0)
-  string(APPEND PACKAGE_VERSION "rc${CLIENT_VERSION_RC}")
+  string(APPEND CLIENT_VERSION_STRING "rc${CLIENT_VERSION_RC}")
 endif()
 
 set(COPYRIGHT_HOLDERS "The %s developers")
 set(COPYRIGHT_HOLDERS_FINAL "The Elements Project developers")
-set(PACKAGE_BUGREPORT "https://github.com/ElementsProject/elements/issues")
+set(CLIENT_BUGREPORT "https://github.com/ElementsProject/elements/issues")
 
 #=============================
 # Language setup

@@ -106,7 +106,7 @@ static void ExitFailure(std::string_view str_err)
 }
 
 BasicTestingSetup::BasicTestingSetup(const ChainType chainType, TestOpts opts, const std::string& fedpegscript)
-    : m_path_root{fs::temp_directory_path() / "test_common_" PACKAGE_NAME / g_rng_temp_path.rand256().ToString()},
+    : m_path_root{fs::temp_directory_path() / "test_common_" CLIENT_NAME / g_rng_temp_path.rand256().ToString()},
       m_args{}
 {
     // Hack to allow testing of fedpeg args

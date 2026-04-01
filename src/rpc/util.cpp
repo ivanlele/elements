@@ -705,8 +705,8 @@ UniValue RPCHelpMan::HandleRequest(const JSONRPCRequest& request) const
             throw std::runtime_error{
                 strprintf("Internal bug detected: RPC call \"%s\" returned incorrect type:\n%s\n%s %s\nPlease report this issue here: %s\n",
                           m_name, explain,
-                          PACKAGE_NAME, FormatFullVersion(),
-                          PACKAGE_BUGREPORT)};
+                          CLIENT_NAME, FormatFullVersion(),
+                          CLIENT_BUGREPORT)};
         }
     }
     return ret;
