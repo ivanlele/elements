@@ -16,7 +16,6 @@ export CMAKE_GENERATOR="Ninja"
 export BITCOIN_CONFIG="\
  -DBUILD_GUI=ON \
  -DWITH_ZMQ=ON \
- -DWITH_MINIUPNPC=ON \
  -DREDUCE_EXPORTS=ON \
  -DCMAKE_CXX_FLAGS='-fno-stack-check -Wno-error=deprecated-declarations' \
 "
