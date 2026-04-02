@@ -61,6 +61,6 @@ std::unique_ptr<CBaseChainParams> CreateBaseChainParams(const ChainTypeMeta chai
 void SelectBaseParams(const ChainTypeMeta chain);
 
 /** List of possible chain / network names  */
-#define LIST_CHAIN_NAMES "main, test, signet, regtest, liquidv1, liquidv1test"
+#define LIST_CHAIN_NAMES "main, test, signet, regtest, liquidv1, liquidv1test, liquidtestnet"
 
 #endif // BITCOIN_CHAINPARAMSBASE_H
