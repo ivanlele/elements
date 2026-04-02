@@ -22,4 +22,3 @@ export BITCOIN_CONFIG="\
 export CI_OS_NAME="macos"
 export NO_DEPENDS=1
 export OSX_SDK=""
-export RUN_FUZZ_TESTS=true
