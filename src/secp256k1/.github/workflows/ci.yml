@@ -33,6 +33,7 @@ env:
   RECOVERY: 'no'
   EXTRAKEYS: 'no'
   SCHNORRSIG: 'no'
+  MUSIG: 'no'
   ELLSWIFT: 'no'
   ECDSA_S2C: 'no'
   GENERATOR: 'no'
@@ -43,7 +44,7 @@ env:
   BPPP: 'no'
   SCHNORRSIG_HALFAGG: 'no'
   ### test options
-  SECP256K1_TEST_ITERS:
+  SECP256K1_TEST_ITERS: 64
   BENCH: 'yes'
   SECP256K1_BENCH_ITERS: 2
   CTIMETESTS: 'yes'
@@ -150,6 +151,7 @@ jobs:
       RECOVERY: 'yes'
       EXTRAKEYS: 'yes'
       SCHNORRSIG: 'yes'
+      MUSIG: 'yes'
       ELLSWIFT: 'yes'
       EXPERIMENTAL: 'yes'
       ECDSA_S2C: 'yes'
@@ -204,6 +206,7 @@ jobs:
       RECOVERY: 'yes'
       EXTRAKEYS: 'yes'
       SCHNORRSIG: 'yes'
+      MUSIG: 'yes'
       ELLSWIFT: 'yes'
       EXPERIMENTAL: 'yes'
       ECDSA_S2C: 'yes'
@@ -265,6 +268,7 @@ jobs:
       RECOVERY: 'yes'
       EXTRAKEYS: 'yes'
       SCHNORRSIG: 'yes'
+      MUSIG: 'yes'
       ELLSWIFT: 'yes'
       EXPERIMENTAL: 'yes'
       ECDSA_S2C: 'yes'
@@ -320,6 +324,7 @@ jobs:
       RECOVERY: 'yes'
       EXTRAKEYS: 'yes'
       SCHNORRSIG: 'yes'
+      MUSIG: 'yes'
       ELLSWIFT: 'yes'
       EXPERIMENTAL: 'yes'
       ECDSA_S2C: 'yes'
@@ -385,6 +390,7 @@ jobs:
       RECOVERY: 'yes'
       EXTRAKEYS: 'yes'
       SCHNORRSIG: 'yes'
+      MUSIG: 'yes'
       ELLSWIFT: 'yes'
       EXPERIMENTAL: 'yes'
       ECDSA_S2C: 'yes'
@@ -447,6 +453,7 @@ jobs:
       RECOVERY: 'yes'
       EXTRAKEYS: 'yes'
       SCHNORRSIG: 'yes'
+      MUSIG: 'yes'
       ELLSWIFT: 'yes'
       EXPERIMENTAL: 'yes'
       ECDSA_S2C: 'yes'
@@ -508,6 +515,7 @@ jobs:
       RECOVERY: 'yes'
       EXTRAKEYS: 'yes'
       SCHNORRSIG: 'yes'
+      MUSIG: 'yes'
       ELLSWIFT: 'yes'
       EXPERIMENTAL: 'yes'
       ECDSA_S2C: 'yes'
@@ -575,6 +583,7 @@ jobs:
       RECOVERY: 'yes'
       EXTRAKEYS: 'yes'
       SCHNORRSIG: 'yes'
+      MUSIG: 'yes'
       ELLSWIFT: 'yes'
       EXPERIMENTAL: 'yes'
       ECDSA_S2C: 'yes'
@@ -632,6 +641,7 @@ jobs:
       RECOVERY: 'yes'
       EXTRAKEYS: 'yes'
       SCHNORRSIG: 'yes'
+      MUSIG: 'yes'
       ELLSWIFT: 'yes'
       EXPERIMENTAL: 'yes'
       ECDSA_S2C: 'yes'
@@ -834,14 +844,14 @@ jobs:
         # Use the bash shell included with Git for Windows.
         shell: bash
         run: |
-          cd build/src/RelWithDebInfo && file *tests.exe bench*.exe libsecp256k1-*.dll || true
+          cd build/bin/RelWithDebInfo && file *tests.exe bench*.exe libsecp256k1-*.dll || true
 
       - name: Check
         run: |
           ctest -C RelWithDebInfo --test-dir build -j ([int]$env:NUMBER_OF_PROCESSORS + 1)
-          build\src\RelWithDebInfo\bench_ecmult.exe
-          build\src\RelWithDebInfo\bench_internal.exe
-          build\src\RelWithDebInfo\bench.exe
+          build\bin\RelWithDebInfo\bench_ecmult.exe
+          build\bin\RelWithDebInfo\bench_internal.exe
+          build\bin\RelWithDebInfo\bench.exe
 
   win64-native-headers:
     name: "x64 (MSVC): C++ (public headers)"
@@ -873,6 +883,7 @@ jobs:
       RECOVERY: 'yes'
       EXTRAKEYS: 'yes'
       SCHNORRSIG: 'yes'
+      MUSIG: 'yes'
       ELLSWIFT: 'yes'
       EXPERIMENTAL: 'yes'
       ECDSA_S2C: 'yes'

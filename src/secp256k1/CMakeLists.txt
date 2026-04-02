@@ -1,14 +1,19 @@
 cmake_minimum_required(VERSION 3.16)
 
+#=============================
+# Project / Package metadata
+#=============================
 project(libsecp256k1
   # The package (a.k.a. release) version is based on semantic versioning 2.0.0 of
   # the API. All changes in experimental modules are treated as
   # backwards-compatible and therefore at most increase the minor version.
-  VERSION 0.5.2
+  VERSION 0.6.0
   DESCRIPTION "Optimized C library for ECDSA signatures and secret/public key operations on curve secp256k1."
   HOMEPAGE_URL "https://github.com/bitcoin-core/secp256k1"
   LANGUAGES C
 )
+enable_testing()
+list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
 if(CMAKE_VERSION VERSION_LESS 3.21)
   get_directory_property(parent_directory PARENT_DIRECTORY)
@@ -27,15 +32,19 @@ endif()
 # https://www.gnu.org/software/libtool/manual/html_node/Updating-version-info.html
 # All changes in experimental modules are treated as if they don't affect the
 # interface and therefore only increase the revision.
-set(${PROJECT_NAME}_LIB_VERSION_CURRENT 4)
-set(${PROJECT_NAME}_LIB_VERSION_REVISION 2)
-set(${PROJECT_NAME}_LIB_VERSION_AGE 2)
+set(${PROJECT_NAME}_LIB_VERSION_CURRENT 5)
+set(${PROJECT_NAME}_LIB_VERSION_REVISION 0)
+set(${PROJECT_NAME}_LIB_VERSION_AGE 0)
 
+#=============================
+# Language setup
+#=============================
 set(CMAKE_C_STANDARD 90)
 set(CMAKE_C_EXTENSIONS OFF)
 
-list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
-
+#=============================
+# Configurable options
+#=============================
 option(BUILD_SHARED_LIBS "Build shared libraries." ON)
 option(SECP256K1_DISABLE_SHARED "Disable shared library. Overrides BUILD_SHARED_LIBS." OFF)
 if(SECP256K1_DISABLE_SHARED)
@@ -52,6 +61,7 @@ option(SECP256K1_ENABLE_MODULE_ECDH "Enable ECDH module." ON)
 option(SECP256K1_ENABLE_MODULE_RECOVERY "Enable ECDSA pubkey recovery module." OFF)
 option(SECP256K1_ENABLE_MODULE_EXTRAKEYS "Enable extrakeys module." ON)
 option(SECP256K1_ENABLE_MODULE_SCHNORRSIG "Enable schnorrsig module." ON)
+option(SECP256K1_ENABLE_MODULE_MUSIG "Enable musig module." ON)
 option(SECP256K1_ENABLE_MODULE_ELLSWIFT "Enable ElligatorSwift module." ON)
 
 option(SECP256K1_ENABLE_MODULE_GENERATOR "Enable NUMS generator module." ON)
@@ -120,6 +130,14 @@ endif()
 
 if(SECP256K1_ENABLE_MODULE_ELLSWIFT)
   add_compile_definitions(ENABLE_MODULE_ELLSWIFT=1)
+endif()
+
+if(SECP256K1_ENABLE_MODULE_MUSIG)
+  if(DEFINED SECP256K1_ENABLE_MODULE_SCHNORRSIG AND NOT SECP256K1_ENABLE_MODULE_SCHNORRSIG)
+    message(FATAL_ERROR "Module dependency error: You have disabled the schnorrsig module explicitly, but it is required by the musig module.")
+  endif()
+  set(SECP256K1_ENABLE_MODULE_SCHNORRSIG ON)
+  add_compile_definitions(ENABLE_MODULE_MUSIG=1)
 endif()
 
 if(SECP256K1_ENABLE_MODULE_SCHNORRSIG)
@@ -331,6 +349,15 @@ if(SECP256K1_APPEND_LDFLAGS)
   string(APPEND CMAKE_C_LINK_EXECUTABLE " ${SECP256K1_APPEND_LDFLAGS}")
 endif()
 
+if(NOT CMAKE_RUNTIME_OUTPUT_DIRECTORY)
+  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/bin)
+endif()
+if(NOT CMAKE_LIBRARY_OUTPUT_DIRECTORY)
+  set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/lib)
+endif()
+if(NOT CMAKE_ARCHIVE_OUTPUT_DIRECTORY)
+  set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR}/lib)
+endif()
 add_subdirectory(src)
 all_targets_compile_options(src "${SECP256K1_LATE_CFLAGS}")
 if(SECP256K1_BUILD_EXAMPLES)
@@ -354,6 +381,7 @@ message("  ECDH ................................ ${SECP256K1_ENABLE_MODULE_ECDH}
 message("  ECDSA pubkey recovery ............... ${SECP256K1_ENABLE_MODULE_RECOVERY}")
 message("  extrakeys ........................... ${SECP256K1_ENABLE_MODULE_EXTRAKEYS}")
 message("  schnorrsig .......................... ${SECP256K1_ENABLE_MODULE_SCHNORRSIG}")
+message("  musig ............................... ${SECP256K1_ENABLE_MODULE_MUSIG}")
 message("  ElligatorSwift ...................... ${SECP256K1_ENABLE_MODULE_ELLSWIFT}")
 message("  generator ........................... ${SECP256K1_ENABLE_MODULE_GENERATOR}")
 message("  rangeproof .......................... ${SECP256K1_ENABLE_MODULE_RANGEPROOF}")
