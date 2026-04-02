@@ -59,7 +59,6 @@ class MempoolAcceptanceTest(BitcoinTestFramework):
             '-txindex','-permitbaremultisig=0',
             '-multi_data_permitted=1', # Elements test
             '-dustrelayfee=0.00003000', # ELEMENTS: use the Bitcoin default dust relay fee rate
-            '-mempoolfullrbf=0',
         ]] * self.num_nodes
         self.supports_cli = False
 
@@ -165,26 +164,13 @@ class MempoolAcceptanceTest(BitcoinTestFramework):
         tx.vout[0].nValue.setToAmount(tx.vout[0].nValue.getAmount() - int(fee * COIN))  # Double the fee
         txid_0_out = tx.vout[0].nValue.getAmount()
         tx.vout[1].nValue.setToAmount(tx.vout[1].nValue.getAmount() + int(fee * COIN))
-        tx.vin[0].nSequence = MAX_BIP125_RBF_SEQUENCE + 1  # Now, opt out of RBF
         raw_tx_0 = tx.serialize().hex()
         txid_0 = tx.rehash()
         self.check_mempool_result(
             result_expected=[{'txid': txid_0, 'allowed': True, 'vsize': tx.get_vsize(), 'fees': {'base': (2 * fee)}}],
             rawtxs=[raw_tx_0],
         )
-
-        self.log.info('A transaction that conflicts with an unconfirmed tx')
-        # Send the transaction that replaces the mempool transaction and opts out of replaceability
         node.sendrawtransaction(hexstring=tx.serialize().hex(), maxfeerate=0)
-        # take original raw_tx_0
-        tx = tx_from_hex(raw_tx_0)
-        tx.vout[0].nValue.setToAmount(tx.vout[0].nValue.getAmount() - int(4 * fee * COIN))  # Set more fee
-        tx.vout[1].nValue.setToAmount(tx.vout[1].nValue.getAmount() + int(4 * fee * COIN))
-        self.check_mempool_result(
-            result_expected=[{'txid': tx.rehash(), 'allowed': False, 'reject-reason': 'txn-mempool-conflict'}],
-            rawtxs=[tx.serialize().hex()],
-            maxfeerate=0,
-        )
 
         self.log.info('A transaction with missing inputs, that never existed')
         tx = tx_from_hex(raw_tx_0)

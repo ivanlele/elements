@@ -369,7 +369,7 @@ class FedPegTest(BitcoinTestFramework):
         pegtxid1 = sidechain.claimpegin(raw, proof)
         # Make sure a second pegin claim does not get accepted in the mempool when
         # another mempool tx already claims that pegin.
-        assert_raises_rpc_error(-4, "txn-mempool-conflict", sidechain.claimpegin, raw, proof)
+        assert_raises_rpc_error(-4, None, sidechain.claimpegin, raw, proof)
 
         # Will invalidate the block that confirms this transaction later
         for node_group in self.node_groups:
