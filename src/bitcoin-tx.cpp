@@ -116,8 +116,11 @@ static int AppInitRawTx(int argc, char* argv[])
             strUsage += FormatParagraph(LicenseInfo());
         } else {
             strUsage += "\n"
-                "Usage:  elements-tx [options] <hex-tx> [commands]  Update hex-encoded Elements transaction\n"
-                "or:     elements-tx [options] -create [commands]   Create hex-encoded Elements transaction\n"
+                "The elements-tx tool is used for creating and modifying Elements transactions.\n\n"
+                "elements-tx can be used with \"<hex-tx> [commands]\" to update a hex-encoded Elements transaction, or with \"-create [commands]\" to create a hex-encoded Elements transaction.\n"
+                "\n"
+                "Usage: elements-tx [options] <hex-tx> [commands]\n"
+                "or:    elements-tx [options] -create [commands]\n"
                 "\n";
             strUsage += gArgs.GetHelpMessage();
         }
