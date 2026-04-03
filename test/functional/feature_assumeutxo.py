@@ -10,7 +10,6 @@ The assumeutxo value generated and used here is committed to in
 `CRegTestParams::m_assumeutxo_data` in `src/kernel/chainparams.cpp`.
 """
 from decimal import Decimal
-import time
 from shutil import rmtree
 
 from dataclasses import dataclass
@@ -32,6 +31,7 @@ from test_framework.util import (
     assert_approx,
     assert_equal,
     assert_raises_rpc_error,
+    ensure_for,
     sha256sum_file,
     try_rpc,
 )
@@ -306,8 +306,7 @@ class AssumeutxoTest(BitcoinTestFramework):
         # If it does request such blocks, the snapshot_node will ignore requests it cannot fulfill, causing the ibd_node
         # to stall. This stall could last for up to 10 min, ultimately resulting in an abrupt disconnection due to the
         # ibd_node's perceived unresponsiveness.
-        time.sleep(3)  # Sleep here because we can't detect when a node avoids requesting blocks from other peer.
-        assert_equal(len(ibd_node.getpeerinfo()[0]['inflight']), 0)
+        ensure_for(duration=3, f=lambda: len(ibd_node.getpeerinfo()[0]['inflight']) == 0)
 
         # Now disconnect nodes and finish background chain sync
         self.disconnect_nodes(ibd_node.index, snapshot_node.index)
