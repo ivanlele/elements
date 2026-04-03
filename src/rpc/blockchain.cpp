@@ -1854,6 +1854,7 @@ void ReconsiderBlock(ChainstateManager& chainman, uint256 block_hash) {
         }
 
         chainman.ActiveChainstate().ResetBlockFailureFlags(pblockindex);
+        chainman.RecalculateBestHeader();
     }
 
     BlockValidationState state;
