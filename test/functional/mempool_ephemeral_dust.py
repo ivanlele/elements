@@ -134,7 +134,7 @@ class EphemeralDustTest(BitcoinTestFramework):
         sats_fee = 1
         dusty_tx = self.wallet.create_self_transfer_multi(fee_per_output=sats_fee, version=3)
         self.add_output_to_create_multi_result(dusty_tx)
-        assert_equal(int(COIN * dusty_tx["fee"]), sats_fee) # has fees
+        assert_equal(dusty_tx["fee"], sats_fee) # has fees (ELEMENTS: fee is in sats, not BTC)
         assert_greater_than(dusty_tx["tx"].vout[0].nValue.getAmount(), 330) # main output is not dust
         assert_equal(dusty_tx["tx"].vout[-1].nValue.getAmount(), 1) # added one is dust (1 sat, below threshold)
 

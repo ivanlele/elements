@@ -362,7 +362,7 @@ class MiniWallet:
                 coinbase=False,
                 confirmations=0,
             ) for i in range(len(tx.vout) - ( 1 if fee else 0 ))], # ELEMENTS remove fee output only if fee is non-zero
-            "fee": Decimal(fee) / COIN,  # ELEMENTS: fee is in sats here, convert to BTC
+            "fee": fee,
             "txid": txid,
             "wtxid": tx.getwtxid(),
             "hex": tx.serialize().hex(),
