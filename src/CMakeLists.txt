@@ -343,14 +343,16 @@ target_link_libraries(bitcoin_node
     core_interface
     bitcoin_common
     bitcoin_util
+    $<TARGET_NAME_IF_EXISTS:bitcoin_zmq>
     leveldb
     minisketch
     univalue
     Boost::headers
     elementssimplicity
     $<TARGET_NAME_IF_EXISTS:libevent::libevent>
+    libevent::core
+    libevent::extra
     $<TARGET_NAME_IF_EXISTS:libevent::pthreads>
-    $<TARGET_NAME_IF_EXISTS:bitcoin_zmq>
     $<TARGET_NAME_IF_EXISTS:USDT::headers>
 )
 
@@ -420,7 +422,8 @@ if(BUILD_CLI)
     bitcoin_cli
     bitcoin_common
     bitcoin_util
-    $<TARGET_NAME_IF_EXISTS:libevent::libevent>
+    libevent::core
+    libevent::extra
   )
   list(APPEND installable_targets elements-cli)
 endif()
