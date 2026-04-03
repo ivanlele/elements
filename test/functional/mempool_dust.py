@@ -65,17 +65,49 @@ class DustRelayFeeTest(BitcoinTestFramework):
             assert_equal(res['allowed'], True)
 
             # amount just below the dust threshold should fail
-            tx.vout[0].nValue.setToAmount(tx.vout[0].nValue.getAmount() + 1)
-            tx.vout[2].nValue.setToAmount(tx.vout[2].nValue.getAmount() - 1)
-            res = node.testmempoolaccept([tx.serialize().hex()])[0]
-            assert_equal(res['allowed'], False)
-            assert_equal(res['reject-reason'], 'dust')
+            # ELEMENTS: skip when threshold is 1, since threshold-1=0 is an invalid output value
+            if dust_threshold > 1:
+                tx.vout[0].nValue.setToAmount(tx.vout[0].nValue.getAmount() + 1)
+                tx.vout[2].nValue.setToAmount(tx.vout[2].nValue.getAmount() - 1)
+                res = node.testmempoolaccept([tx.serialize().hex()])[0]
+                assert_equal(res['allowed'], False)
+                assert_equal(res['reject-reason'], 'dust')
 
             # finally send the transaction to avoid running out of MiniWallet UTXOs
             self.wallet.sendrawtransaction(from_node=node, tx_hex=tx_good_hex)
 
+    def test_dustrelay(self):
+        self.log.info("Test that small outputs are acceptable when dust relay rate is set to 0 that would otherwise trigger ephemeral dust rules")
+
+        self.restart_node(0, extra_args=["-dustrelayfee=0"])
+
+        assert_equal(self.nodes[0].getrawmempool(), [])
+
+        # Double dust, both unspent, with fees. Would have failed individual checks.
+        # Dust is 1 satoshi create_self_transfer_multi disallows 0
+        dusty_tx = self.wallet.create_self_transfer_multi(fee_per_output=1000, amount_per_output=1, num_outputs=2)
+        dust_txid = self.nodes[0].sendrawtransaction(hexstring=dusty_tx["hex"], maxfeerate=0)
+
+        assert_equal(self.nodes[0].getrawmempool(), [dust_txid])
+
+        # Spends one dust along with fee input, leave other dust unspent to check ephemeral dust checks aren't being enforced
+        sweep_tx = self.wallet.create_self_transfer_multi(utxos_to_spend=[self.wallet.get_utxo(), dusty_tx["new_utxos"][0]])
+        sweep_txid = self.nodes[0].sendrawtransaction(sweep_tx["hex"])
+
+        mempool_entries = self.nodes[0].getrawmempool()
+        assert dust_txid in mempool_entries
+        assert sweep_txid in mempool_entries
+        assert_equal(len(mempool_entries), 2)
+
+        # Wipe extra arg to reset dust relay
+        self.restart_node(0, extra_args=[])
+
+        assert_equal(self.nodes[0].getrawmempool(), [])
+
     def run_test(self):
         self.wallet = MiniWallet(self.nodes[0])
+
+        self.test_dustrelay()
 
         # prepare output scripts of each standard type
         _, uncompressed_pubkey = generate_keypair(compressed=False)
@@ -100,10 +132,12 @@ class DustRelayFeeTest(BitcoinTestFramework):
         # test default (no parameter), disabled (=0) and a bunch of arbitrary dust fee rates [sat/kvB]
         for dustfee_sat_kvb in (DUST_RELAY_TX_FEE, 0, 1, 66, 500, 1337, 12345, 21212, 333333):
             dustfee_btc_kvb = dustfee_sat_kvb / Decimal(COIN)
+            dust_parameter = f"-dustrelayfee={dustfee_btc_kvb:.8f}"
             if dustfee_sat_kvb == DUST_RELAY_TX_FEE:
                 self.log.info(f"Test default dust limit setting ({dustfee_sat_kvb} sat/kvB)...")
+                # ELEMENTS: test_dustrelay() restarts node with [], losing -dustrelayfee; restore it here
+                self.restart_node(0, extra_args=[dust_parameter, "-permitbaremultisig"])
             else:
-                dust_parameter = f"-dustrelayfee={dustfee_btc_kvb:.8f}"
                 self.log.info(f"Test dust limit setting {dust_parameter} ({dustfee_sat_kvb} sat/kvB)...")
                 self.restart_node(0, extra_args=[dust_parameter, "-permitbaremultisig"])
 

@@ -330,8 +330,10 @@ class MempoolAcceptanceTest(BitcoinTestFramework):
             rawtxs=[tx.serialize().hex()],
         )
         tx = tx_from_hex(raw_tx_reference)
+        original_vout0_value = tx.vout[0].nValue.getAmount()  # ELEMENTS: save before replacing
         tx.vout[0] = output_p2sh_burn
         tx.vout[0].nValue.setToAmount(tx.vout[0].nValue.getAmount() - 1)  # Make output smaller, such that it is dust for our policy
+        tx.vout[1].nValue.setToAmount(tx.vout[1].nValue.getAmount() + original_vout0_value - tx.vout[0].nValue.getAmount())  # ELEMENTS: balance tx via fee
         self.check_mempool_result(
             result_expected=[{'txid': tx.rehash(), 'allowed': False, 'reject-reason': 'dust'}],
             rawtxs=[tx.serialize().hex()],

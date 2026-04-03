@@ -25,6 +25,7 @@
 #include <node/miner.h>
 #include <policy/policy.h>
 #include <node/warnings.h>
+#include <policy/ephemeral_policy.h>
 #include <pow.h>
 #include <random.h>
 #include <rpc/blockchain.h>
@@ -515,7 +516,15 @@ static RPCHelpMan prioritisetransaction()
         throw JSONRPCError(RPC_INVALID_PARAMETER, "Priority is no longer supported, dummy argument to prioritisetransaction must be 0.");
     }
 
-    EnsureAnyMemPool(request.context).PrioritiseTransaction(hash, nAmount);
+    CTxMemPool& mempool = EnsureAnyMemPool(request.context);
+
+    // Non-0 fee dust transactions are not allowed for entry, and modification not allowed afterwards
+    const auto& tx = mempool.get(hash);
+    if (tx && HasDust(tx, mempool.m_opts.dust_relay_feerate)) {
+        throw JSONRPCError(RPC_INVALID_PARAMETER, "Priority is not supported for transactions with dust outputs.");
+    }
+
+    mempool.PrioritiseTransaction(hash, nAmount);
     return true;
 },
     };

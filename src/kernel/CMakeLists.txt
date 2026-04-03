@@ -45,6 +45,7 @@ add_library(bitcoinkernel
   ../node/chainstate.cpp
   ../node/utxo_snapshot.cpp
   ../pegins.cpp
+  ../policy/ephemeral_policy.cpp
   ../policy/feerate.cpp
   ../policy/packages.cpp
   ../policy/policy.cpp
