@@ -211,9 +211,9 @@ class OrphanHandlingTest(BitcoinTestFramework):
 
         # Relay the child. It should not be accepted because it has missing inputs.
         # Its parent should not be requested because its hash (txid == wtxid) has been added to the rejection filter.
-        with node.assert_debug_log(['not keeping orphan with rejected parents {}'.format(child_nonsegwit["txid"])]):
-            self.relay_transaction(peer2, child_nonsegwit["tx"])
+        self.relay_transaction(peer2, child_nonsegwit["tx"])
         assert child_nonsegwit["txid"] not in node.getrawmempool()
+        assert not tx_in_orphanage(node, child_nonsegwit["tx"])
 
         # No parents are requested.
         self.nodes[0].bumpmocktime(GETDATA_TX_INTERVAL)
@@ -232,6 +232,7 @@ class OrphanHandlingTest(BitcoinTestFramework):
         # Relay the child. It should not be accepted because it has missing inputs.
         self.relay_transaction(peer2, child_low_fee["tx"])
         assert child_low_fee["txid"] not in node.getrawmempool()
+        assert tx_in_orphanage(node, child_low_fee["tx"])
 
         # The parent should be requested because even though the txid commits to the fee, it doesn't
         # commit to the feerate. Delayed because it's by txid and this is not a preferred relay peer.
@@ -251,6 +252,7 @@ class OrphanHandlingTest(BitcoinTestFramework):
         # Relay the child. It should not be accepted because it has missing inputs.
         self.relay_transaction(peer2, child_invalid_witness["tx"])
         assert child_invalid_witness["txid"] not in node.getrawmempool()
+        assert tx_in_orphanage(node, child_invalid_witness["tx"])
 
         # The parent should be requested since the unstripped wtxid would differ. Delayed because
         # it's by txid and this is not a preferred relay peer.
@@ -299,6 +301,7 @@ class OrphanHandlingTest(BitcoinTestFramework):
         self.relay_transaction(peer, orphan["tx"])
         self.nodes[0].bumpmocktime(NONPREF_PEER_TX_DELAY + TXID_RELAY_DELAY)
         peer.sync_with_ping()
+        assert tx_in_orphanage(node, orphan["tx"])
         assert_equal(len(peer.last_message["getdata"].inv), 2)
         peer.wait_for_parent_requests([int(txid_conf_old, 16), int(missing_tx["txid"], 16)])
 
@@ -348,6 +351,7 @@ class OrphanHandlingTest(BitcoinTestFramework):
         # Relay orphan child_A
         self.relay_transaction(peer_orphans, child_A["tx"])
         self.nodes[0].bumpmocktime(NONPREF_PEER_TX_DELAY + TXID_RELAY_DELAY)
+        assert tx_in_orphanage(node, child_A["tx"])
         # There are 3 missing parents. missing_parent_A and missing_parent_AB should be requested.
         # But inflight_parent_AB should not, because there is already an in-flight request for it.
         peer_orphans.wait_for_parent_requests([int(missing_parent_A["txid"], 16), int(missing_parent_AB["txid"], 16)])
@@ -356,6 +360,7 @@ class OrphanHandlingTest(BitcoinTestFramework):
         # Relay orphan child_B
         self.relay_transaction(peer_orphans, child_B["tx"])
         self.nodes[0].bumpmocktime(NONPREF_PEER_TX_DELAY + TXID_RELAY_DELAY)
+        assert tx_in_orphanage(node, child_B["tx"])
         # Only missing_parent_B should be requested. Not inflight_parent_AB or missing_parent_AB
         # because they are already being requested from peer_txrequest and peer_orphans respectively.
         peer_orphans.wait_for_parent_requests([int(missing_parent_B["txid"], 16)])
@@ -375,12 +380,14 @@ class OrphanHandlingTest(BitcoinTestFramework):
         # The node should put missing_parent_orphan into the orphanage and request missing_grandparent
         self.relay_transaction(peer, missing_parent_orphan["tx"])
         self.nodes[0].bumpmocktime(NONPREF_PEER_TX_DELAY + TXID_RELAY_DELAY)
+        assert tx_in_orphanage(node, missing_parent_orphan["tx"])
         peer.wait_for_parent_requests([int(missing_grandparent["txid"], 16)])
 
         # The node should put the orphan into the orphanage and request missing_parent, skipping
         # missing_parent_orphan because it already has it in the orphanage.
         self.relay_transaction(peer, orphan["tx"])
         self.nodes[0].bumpmocktime(NONPREF_PEER_TX_DELAY + TXID_RELAY_DELAY)
+        assert tx_in_orphanage(node, orphan["tx"])
         peer.wait_for_parent_requests([int(missing_parent["txid"], 16)])
 
     @cleanup
@@ -400,18 +407,19 @@ class OrphanHandlingTest(BitcoinTestFramework):
 
         # Relay the parent. It should be rejected because it pays too low fees.
         self.relay_transaction(peer1, parent_low_fee_nonsegwit["tx"])
+        assert parent_low_fee_nonsegwit["txid"] not in node.getrawmempool()
 
         # Relay the child. It should be rejected for having missing parents, and this rejection is
         # cached by txid and wtxid.
-        with node.assert_debug_log(['not keeping orphan with rejected parents {}'.format(child["txid"])]):
-            self.relay_transaction(peer1, child["tx"])
+        self.relay_transaction(peer1, child["tx"])
         assert_equal(0, len(node.getrawmempool()))
+        assert not tx_in_orphanage(node, child["tx"])
         peer1.assert_never_requested(parent_low_fee_nonsegwit["txid"])
 
         # Grandchild should also not be kept in orphanage because its parent has been rejected.
-        with node.assert_debug_log(['not keeping orphan with rejected parents {}'.format(grandchild["txid"])]):
-            self.relay_transaction(peer2, grandchild["tx"])
+        self.relay_transaction(peer2, grandchild["tx"])
         assert_equal(0, len(node.getrawmempool()))
+        assert not tx_in_orphanage(node, grandchild["tx"])
         peer2.assert_never_requested(child["txid"])
         peer2.assert_never_requested(child["tx"].getwtxid())
 
@@ -439,6 +447,7 @@ class OrphanHandlingTest(BitcoinTestFramework):
 
         # 1. Fake orphan is received first. It is missing an input.
         bad_peer.send_and_ping(msg_tx(tx_orphan_bad_wit))
+        assert tx_in_orphanage(node, tx_orphan_bad_wit)
 
         # 2. Node requests the missing parent by txid.
         parent_txid_int = int(tx_parent["txid"], 16)
@@ -447,8 +456,9 @@ class OrphanHandlingTest(BitcoinTestFramework):
 
         # 3. Honest peer relays the real child, which is also missing parents and should be placed
         # in the orphanage.
-        with node.assert_debug_log(["missingorspent", "stored orphan tx"]):
+        with node.assert_debug_log(["missingorspent"]):
             honest_peer.send_and_ping(msg_tx(tx_child["tx"]))
+        assert tx_in_orphanage(node, tx_child["tx"])
 
         # Time out the previous request for the parent (node will not request the same transaction
         # from multiple nodes at the same time)
@@ -488,6 +498,7 @@ class OrphanHandlingTest(BitcoinTestFramework):
 
         # 1. Fake orphan is received first. It is missing an input.
         bad_peer.send_and_ping(msg_tx(tx_orphan_bad_wit))
+        assert tx_in_orphanage(node, tx_orphan_bad_wit)
 
         # 2. Node requests missing tx_grandparent by txid.
         grandparent_txid_int = int(tx_grandparent["txid"], 16)
@@ -497,16 +508,16 @@ class OrphanHandlingTest(BitcoinTestFramework):
         # 3. Honest peer relays the grandchild, which is missing a parent. The parent by txid already
         # exists in orphanage, but should be re-requested because the node shouldn't assume that the
         # witness data is the same. In this case, a same-txid-different-witness transaction exists!
-        with node.assert_debug_log(["stored orphan tx"]):
-            honest_peer.send_and_ping(msg_tx(tx_grandchild["tx"]))
+        honest_peer.send_and_ping(msg_tx(tx_grandchild["tx"]))
+        assert tx_in_orphanage(node, tx_grandchild["tx"])
         middle_txid_int = int(tx_middle["txid"], 16)
         node.bumpmocktime(NONPREF_PEER_TX_DELAY + TXID_RELAY_DELAY)
         honest_peer.wait_for_getdata([middle_txid_int])
 
         # 4. Honest peer relays the real child, which is also missing parents and should be placed
         # in the orphanage.
-        with node.assert_debug_log(["stored orphan tx"]):
-            honest_peer.send_and_ping(msg_tx(tx_middle["tx"]))
+        honest_peer.send_and_ping(msg_tx(tx_middle["tx"]))
+        assert tx_in_orphanage(node, tx_middle["tx"])
         assert_equal(len(node.getrawmempool()), 0)
 
         # 5. Honest peer sends tx_grandparent
@@ -519,6 +530,7 @@ class OrphanHandlingTest(BitcoinTestFramework):
         assert tx_middle["txid"] in node_mempool
         assert tx_grandchild["txid"] in node_mempool
         assert_equal(node.getmempoolentry(tx_middle["txid"])["wtxid"], tx_middle["wtxid"])
+        assert_equal(len(node.getorphantxs()), 0)
 
     @cleanup
     def test_orphan_txid_inv(self):
@@ -537,6 +549,7 @@ class OrphanHandlingTest(BitcoinTestFramework):
 
         # 1. Fake orphan is received first. It is missing an input.
         bad_peer.send_and_ping(msg_tx(tx_orphan_bad_wit))
+        assert tx_in_orphanage(node, tx_orphan_bad_wit)
 
         # 2. Node requests the missing parent by txid.
         parent_txid_int = int(tx_parent["txid"], 16)
@@ -551,8 +564,8 @@ class OrphanHandlingTest(BitcoinTestFramework):
         # 4. The child is requested. Honest peer sends it.
         node.bumpmocktime(TXREQUEST_TIME_SKIP)
         honest_peer.wait_for_getdata([child_txid_int])
-        with node.assert_debug_log(["stored orphan tx"]):
-            honest_peer.send_and_ping(msg_tx(tx_child["tx"]))
+        honest_peer.send_and_ping(msg_tx(tx_child["tx"]))
+        assert tx_in_orphanage(node, tx_child["tx"])
 
         # 5. After first parent request times out, the node sends another one for the missing parent
         # of the real orphan child.
@@ -569,6 +582,7 @@ class OrphanHandlingTest(BitcoinTestFramework):
         assert tx_parent["txid"] in node_mempool
         assert tx_child["txid"] in node_mempool
         assert_equal(node.getmempoolentry(tx_child["txid"])["wtxid"], tx_child["wtxid"])
+        assert_equal(len(node.getorphantxs()), 0)
 
     @cleanup
     def test_max_orphan_amount(self):
