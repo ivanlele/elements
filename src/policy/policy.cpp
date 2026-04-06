@@ -79,6 +79,18 @@ bool IsDust(const CTxOut& txout, const CFeeRate& dustRelayFeeIn)
     return (txout.nValue.GetAmount() < GetDustThreshold(txout, dustRelayFeeIn));
 }
 
+std::vector<uint32_t> GetDust(const CTransaction& tx, CFeeRate dust_relay_rate)
+{
+    std::vector<uint32_t> dust_outputs;
+    for (uint32_t i{0}; i < tx.vout.size(); ++i) {
+        // ELEMENTS: check explicity
+        const auto& output = tx.vout[i];
+        if (output.nAsset.IsExplicit() && output.nAsset.GetAsset() != ::policyAsset) continue;
+        if (IsDust(output, dust_relay_rate)) dust_outputs.push_back(i);
+    }
+    return dust_outputs;
+}
+
 bool IsStandard(const CScript& scriptPubKey, const std::optional<unsigned>& max_datacarrier_bytes, TxoutType& whichType)
 {
     std::vector<std::vector<unsigned char> > vSolutions;
@@ -147,7 +159,6 @@ bool IsStandardTx(const CTransaction& tx, const std::optional<unsigned>& max_dat
 
     const CChainParams& params = Params();
     unsigned int nDataOut = 0;
-    unsigned int num_dust_outputs{0};
     TxoutType whichType;
     for (const CTxOut& txout : tx.vout) {
         if (!::IsStandard(txout.scriptPubKey, max_datacarrier_bytes, whichType)) {
@@ -160,13 +171,11 @@ bool IsStandardTx(const CTransaction& tx, const std::optional<unsigned>& max_dat
         } else if ((whichType == TxoutType::MULTISIG) && (!permit_bare_multisig)) {
             reason = "bare-multisig";
             return false;
-        } else if ((txout.nAsset.IsExplicit() && txout.nAsset.GetAsset() == policyAsset) && IsDust(txout, dust_relay_fee)) {
-            num_dust_outputs++;
         }
     }
 
     // Only MAX_DUST_OUTPUTS_PER_TX dust is permitted(on otherwise valid ephemeral dust)
-    if (num_dust_outputs > MAX_DUST_OUTPUTS_PER_TX) {
+    if (GetDust(tx, dust_relay_fee).size() > MAX_DUST_OUTPUTS_PER_TX) {
         reason = "dust";
         return false;
     }
