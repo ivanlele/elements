@@ -94,23 +94,6 @@ static void TxToJSON(const CTransaction& tx, const uint256 hashBlock, UniValue& 
     }
 }
 
-static std::vector<RPCResult> ScriptPubKeyDoc() {
-    return
-         {
-             {RPCResult::Type::STR, "asm", "Disassembly of the output script"},
-             {RPCResult::Type::STR, "desc", "Inferred descriptor for the output"},
-             {RPCResult::Type::STR_HEX, "hex", "The raw output script bytes, hex-encoded"},
-             {RPCResult::Type::STR, "pegout_address", /*optional=*/true, "(only pegout)"},
-             {RPCResult::Type::STR, "pegout_asm", /*optional=*/true, "(only pegout) pegout scriptpubkey (asm)"},
-             {RPCResult::Type::STR_HEX, "pegout_hex", /*optional=*/true, "(only pegout) pegout scriptpubkey (hex)"},
-             {RPCResult::Type::STR_HEX, "pegout_chain", /*optional=*/true, "(only pegout) Hash of genesis block of parent chain"},
-             {RPCResult::Type::STR_HEX, "pegout_desc", /*optional=*/true, "(only pegout) Inferred descriptor for the pegout"},
-             {RPCResult::Type::STR, "pegout_type", /*optional=*/true, "(only pegout) The pegout type, eg 'pubkeyhash'"},
-             {RPCResult::Type::STR, "type", "The type (one of: " + GetAllOutputTypes() + ")"},
-             {RPCResult::Type::STR, "address", /*optional=*/true, "The Bitcoin address (only if a well-defined address exists)"},
-         };
-}
-
 static std::vector<RPCResult> DecodeTxDoc(const std::string& txid_field_doc)
 {
     return {
