@@ -290,7 +290,7 @@ extern const HashWriter HASHER_TAPLEAF_ELEMENTS;    //!< Hasher with tag "TapLea
 extern const HashWriter HASHER_TAPBRANCH_ELEMENTS;  //!< Hasher with tag "TapBranch" pre-fed to it.
 
 template <class T>
-uint256 SignatureHash(const CScript& scriptCode, const T& txTo, unsigned int nIn, int nHashType, const CConfidentialValue& amount, SigVersion sigversion, unsigned int flags, const PrecomputedTransactionData* cache = nullptr);
+uint256 SignatureHash(const CScript& scriptCode, const T& txTo, unsigned int nIn, int32_t nHashType, const CConfidentialValue& amount, SigVersion sigversion, unsigned int flags, const PrecomputedTransactionData* cache = nullptr);
 
 class BaseSignatureChecker
 {
