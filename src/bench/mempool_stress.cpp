@@ -10,6 +10,7 @@
 #include <script/script.h>
 #include <sync.h>
 #include <test/util/setup_common.h>
+#include <test/util/txmempool.h>
 #include <txmempool.h>
 #include <validation.h>
 
@@ -29,7 +30,7 @@ static void AddTx(const CTransactionRef& tx, CTxMemPool& pool) EXCLUSIVE_LOCKS_R
     unsigned int sigOpCost = 4;
     std::set<std::pair<uint256, COutPoint>> setPeginsSpent;
     LockPoints lp;
-    pool.addUnchecked(CTxMemPoolEntry(tx, 1000, nTime, nHeight, sequence, spendsCoinbase, sigOpCost, lp, setPeginsSpent));
+    AddToMempool(pool, CTxMemPoolEntry(tx, 1000, nTime, nHeight, sequence, spendsCoinbase, sigOpCost, lp, setPeginsSpent));
 }
 
 struct Available {

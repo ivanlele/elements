@@ -11,6 +11,7 @@
 #include <script/script.h>
 #include <sync.h>
 #include <test/util/setup_common.h>
+#include <test/util/txmempool.h>
 #include <txmempool.h>
 #include <util/check.h>
 
@@ -29,7 +30,7 @@ static void AddTx(const CTransactionRef& tx, CTxMemPool& pool) EXCLUSIVE_LOCKS_R
     uint64_t fee{0};
     LockPoints lp;
     std::set<std::pair<uint256, COutPoint>> setPeginsSpent;
-    pool.addUnchecked(CTxMemPoolEntry(
+    AddToMempool(pool, CTxMemPoolEntry(
         tx, fee, nTime, nHeight, sequence,
         spendsCoinbase, sigOpCost, lp, setPeginsSpent));
 }

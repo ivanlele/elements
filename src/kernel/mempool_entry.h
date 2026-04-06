@@ -112,7 +112,7 @@ public:
                     int64_t time, unsigned int entry_height, uint64_t entry_sequence,
                     bool spends_coinbase,
                     int64_t sigops_cost, LockPoints lp,
-                    const std::set<std::pair<uint256, COutPoint>>& setPeginsSpent)
+                    const std::set<std::pair<uint256, COutPoint>>& setPeginsSpent = {})
         : tx{tx},
           nFee{fee},
           nTxWeight{GetTransactionWeight(*tx)},
