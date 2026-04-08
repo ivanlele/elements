@@ -41,7 +41,9 @@ public:
             auto [dest_it, inserted] = mapCoinsWritten.try_emplace(it->first);
             dest_it->second.coin = it->second.coin;
             dest_it->second.peginSpent = it->second.peginSpent;
-            dest_it->second.AddFlags(it->second.GetFlags(), *dest_it, m_written_sentinel);
+            if (it->second.IsDirty()) CCoinsCacheEntry::SetDirty(*dest_it, m_written_sentinel);
+            if (it->second.IsFresh()) CCoinsCacheEntry::SetFresh(*dest_it, m_written_sentinel);
+            if (it->second.IsPegin()) CCoinsCacheEntry::SetPegin(*dest_it, m_written_sentinel);
         }
         return true;
     }
@@ -92,7 +94,7 @@ BOOST_AUTO_TEST_CASE(PeginSpent_validity)
     {
         auto [it, inserted] = mapCoins.try_emplace(outpoint3);
         it->second.peginSpent = true;
-        it->second.AddFlags(CCoinsCacheEntry::PEGIN, *it, sentinel);
+        CCoinsCacheEntry::SetPegin(*it, sentinel);
     }
     {
         auto cursor{CoinsViewCacheCursor(usage, sentinel, mapCoins, /*will_erase=*/true)};
@@ -109,7 +111,9 @@ BOOST_AUTO_TEST_CASE(PeginSpent_validity)
     {
         auto [it, inserted] = mapCoins.try_emplace(outpoint3);
         it->second.peginSpent = false;
-        it->second.AddFlags(CCoinsCacheEntry::PEGIN | CCoinsCacheEntry::DIRTY | CCoinsCacheEntry::FRESH, *it, sentinel);
+        CCoinsCacheEntry::SetPegin(*it, sentinel);
+        CCoinsCacheEntry::SetDirty(*it, sentinel);
+        CCoinsCacheEntry::SetFresh(*it, sentinel);
     }
     {
         auto cursor{CoinsViewCacheCursor(usage, sentinel, mapCoins, /*will_erase=*/true)};
@@ -126,7 +130,9 @@ BOOST_AUTO_TEST_CASE(PeginSpent_validity)
     {
         auto [it, inserted] = mapCoins.try_emplace(outpoint3);
         it->second.peginSpent = true;
-        it->second.AddFlags(CCoinsCacheEntry::PEGIN | CCoinsCacheEntry::DIRTY | CCoinsCacheEntry::FRESH, *it, sentinel);
+        CCoinsCacheEntry::SetPegin(*it, sentinel);
+        CCoinsCacheEntry::SetDirty(*it, sentinel);
+        CCoinsCacheEntry::SetFresh(*it, sentinel);
     }
     {
         auto cursor{CoinsViewCacheCursor(usage, sentinel, mapCoins, /*will_erase=*/true)};
@@ -147,13 +153,21 @@ BOOST_AUTO_TEST_CASE(PeginSpent_validity)
     BOOST_CHECK_EQUAL(coins.mapCoinsWritten.size(), 0U);
     coinsCache.Flush();
     BOOST_CHECK_EQUAL(coins.mapCoinsWritten.size(), 4U);
-    BOOST_CHECK_EQUAL(coins.mapCoinsWritten[outpoint].GetFlags(), CCoinsCacheEntry::DIRTY | CCoinsCacheEntry::FRESH | CCoinsCacheEntry::PEGIN);
+    BOOST_CHECK(coins.mapCoinsWritten[outpoint].IsDirty());
+    BOOST_CHECK(coins.mapCoinsWritten[outpoint].IsFresh());
+    BOOST_CHECK(coins.mapCoinsWritten[outpoint].IsPegin());
     BOOST_CHECK_EQUAL(coins.mapCoinsWritten[outpoint].peginSpent, true);
-    BOOST_CHECK_EQUAL(coins.mapCoinsWritten[outpoint2].GetFlags(), CCoinsCacheEntry::FRESH | CCoinsCacheEntry::PEGIN);
+    BOOST_CHECK(!coins.mapCoinsWritten[outpoint2].IsDirty());
+    BOOST_CHECK(coins.mapCoinsWritten[outpoint2].IsFresh());
+    BOOST_CHECK(coins.mapCoinsWritten[outpoint2].IsPegin());
     BOOST_CHECK_EQUAL(coins.mapCoinsWritten[outpoint2].peginSpent, false);
-    BOOST_CHECK_EQUAL(coins.mapCoinsWritten[outpoint3].GetFlags(), CCoinsCacheEntry::DIRTY | CCoinsCacheEntry::FRESH | CCoinsCacheEntry::PEGIN);
+    BOOST_CHECK(coins.mapCoinsWritten[outpoint3].IsDirty());
+    BOOST_CHECK(coins.mapCoinsWritten[outpoint3].IsFresh());
+    BOOST_CHECK(coins.mapCoinsWritten[outpoint3].IsPegin());
     BOOST_CHECK_EQUAL(coins.mapCoinsWritten[outpoint3].peginSpent, true);
-    BOOST_CHECK_EQUAL(coins.mapCoinsWritten[outpoint4].GetFlags(), CCoinsCacheEntry::DIRTY | CCoinsCacheEntry::FRESH | CCoinsCacheEntry::PEGIN);
+    BOOST_CHECK(coins.mapCoinsWritten[outpoint4].IsDirty());
+    BOOST_CHECK(coins.mapCoinsWritten[outpoint4].IsFresh());
+    BOOST_CHECK(coins.mapCoinsWritten[outpoint4].IsPegin());
     BOOST_CHECK_EQUAL(coins.mapCoinsWritten[outpoint3].peginSpent, true);
 
     // CCoinsViewCache should lose outpoint2 in BatchWrite logic
@@ -169,11 +183,17 @@ BOOST_AUTO_TEST_CASE(PeginSpent_validity)
     }
     coinsCache2.Flush();
     BOOST_CHECK_EQUAL(coins2.mapCoinsWritten.size(), 3U);
-    BOOST_CHECK_EQUAL(coins2.mapCoinsWritten[outpoint].GetFlags(), CCoinsCacheEntry::DIRTY | CCoinsCacheEntry::FRESH | CCoinsCacheEntry::PEGIN);
+    BOOST_CHECK(coins2.mapCoinsWritten[outpoint].IsDirty());
+    BOOST_CHECK(coins2.mapCoinsWritten[outpoint].IsFresh());
+    BOOST_CHECK(coins2.mapCoinsWritten[outpoint].IsPegin());
     BOOST_CHECK_EQUAL(coins2.mapCoinsWritten[outpoint].peginSpent, true);
-    BOOST_CHECK_EQUAL(coins2.mapCoinsWritten[outpoint3].GetFlags(), CCoinsCacheEntry::DIRTY | CCoinsCacheEntry::FRESH | CCoinsCacheEntry::PEGIN);
+    BOOST_CHECK(coins2.mapCoinsWritten[outpoint3].IsDirty());
+    BOOST_CHECK(coins2.mapCoinsWritten[outpoint3].IsFresh());
+    BOOST_CHECK(coins2.mapCoinsWritten[outpoint3].IsPegin());
     BOOST_CHECK_EQUAL(coins2.mapCoinsWritten[outpoint3].peginSpent, true);
-    BOOST_CHECK_EQUAL(coins2.mapCoinsWritten[outpoint4].GetFlags(), CCoinsCacheEntry::DIRTY | CCoinsCacheEntry::FRESH | CCoinsCacheEntry::PEGIN);
+    BOOST_CHECK(coins2.mapCoinsWritten[outpoint4].IsDirty());
+    BOOST_CHECK(coins2.mapCoinsWritten[outpoint4].IsFresh());
+    BOOST_CHECK(coins2.mapCoinsWritten[outpoint4].IsPegin());
     BOOST_CHECK_EQUAL(coins2.mapCoinsWritten[outpoint4].peginSpent, true);
 }
 

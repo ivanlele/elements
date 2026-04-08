@@ -130,7 +130,7 @@ bool CCoinsViewDB::BatchWrite(CoinsViewCacheCursor& cursor, const uint256 &hashB
     for (auto it{cursor.Begin()}; it != cursor.End();) {
         if (it->second.IsDirty()) {
             // ELEMENTS:
-            if (it->second.GetFlags() & CCoinsCacheEntry::PEGIN) {
+            if (it->second.IsPegin()) {
                 if (!it->second.peginSpent) {
                     batch.Erase(std::make_pair(DB_PEGIN_FLAG, it->first));
                 } else {
