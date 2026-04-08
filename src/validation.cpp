@@ -2347,10 +2347,17 @@ void UpdateCoins(const CTransaction& tx, CCoinsViewCache& inputs, CTxUndo &txund
     AddCoins(inputs, tx, nHeight);
 }
 
-bool CScriptCheck::operator()() {
+std::optional<std::pair<ScriptError, std::string>> CScriptCheck::operator()() {
     const CScript &scriptSig = ptxTo->vin[nIn].scriptSig;
-    const CScriptWitness *witness = ptxTo->witness.vtxinwit.size() > nIn ? &ptxTo->witness.vtxinwit[nIn].scriptWitness : nullptr;
-    return VerifyScript(scriptSig, m_tx_out.scriptPubKey, witness, nFlags, CachingTransactionSignatureChecker(ptxTo, nIn, m_tx_out.nValue, cacheStore, *m_signature_cache, *txdata), &error);
+
+    const CScriptWitness *witness =  ptxTo->witness.vtxinwit.size() > nIn ? &ptxTo->witness.vtxinwit[nIn].scriptWitness : nullptr;
+    ScriptError error{SCRIPT_ERR_UNKNOWN_ERROR};
+    if (VerifyScript(scriptSig, m_tx_out.scriptPubKey, witness, nFlags, CachingTransactionSignatureChecker(ptxTo, nIn, m_tx_out.nValue, cacheStore, *m_signature_cache, *txdata), &error)) {
+        return std::nullopt;
+    } else {
+        auto debug_str = strprintf("input %i of %s (wtxid %s), spending %s:%i", nIn, ptxTo->GetHash().ToString(), ptxTo->GetWitnessHash().ToString(), ptxTo->vin[nIn].prevout.hash.ToString(), ptxTo->vin[nIn].prevout.n);
+        return std::make_pair(error, std::move(debug_str));
+    }
 }
 
 ValidationCache::ValidationCache(const size_t script_execution_cache_bytes, const size_t signature_cache_bytes)
@@ -2443,9 +2450,13 @@ bool CheckInputScripts(const CTransaction& tx, TxValidationState& state,
         // spent being checked as a part of CScriptCheck.
 
         // Verify signature
+        // CCheck* check = new CScriptCheck(txdata.m_spent_outputs[i], tx, validation_cache.m_signature_cache, i, flags, cacheSigStore, &txdata);
+        // ScriptError serror = QueueCheck(pvChecks, check);
+        // if (serror != SCRIPT_ERR_OK) {
         CCheck* check = new CScriptCheck(txdata.m_spent_outputs[i], tx, validation_cache.m_signature_cache, i, flags, cacheSigStore, &txdata);
-        ScriptError serror = QueueCheck(pvChecks, check);
-        if (serror != SCRIPT_ERR_OK) {
+        if (pvChecks) {
+            pvChecks->emplace_back(std::move(check));
+        } else if (auto result = (*check)(); result.has_value()) {
             if (flags & STANDARD_NOT_MANDATORY_VERIFY_FLAGS) {
                 // Check whether the failure was caused by a
                 // non-mandatory script verification check, such as
@@ -2457,22 +2468,23 @@ bool CheckInputScripts(const CTransaction& tx, TxValidationState& state,
                 // data providers.
                 CScriptCheck check2(txdata.m_spent_outputs[i], tx, validation_cache.m_signature_cache, i,
                         flags & ~STANDARD_NOT_MANDATORY_VERIFY_FLAGS, cacheSigStore, &txdata);
-                if (check2()) {
-                    return state.Invalid(TxValidationResult::TX_NOT_STANDARD, strprintf("non-mandatory-script-verify-flag (%s)", ScriptErrorString(serror)));
+                auto mandatory_result = check2();
+                if (!mandatory_result.has_value()) {
+                    return state.Invalid(TxValidationResult::TX_NOT_STANDARD, strprintf("non-mandatory-script-verify-flag (%s)", ScriptErrorString(result->first)), result->second);
+                } else {
+                    // If the second check failed, it failed due to a mandatory script verification
+                    // flag, but the first check might have failed on a non-mandatory script
+                    // verification flag.
+                    //
+                    // Avoid reporting a mandatory script check failure with a non-mandatory error
+                    // string by reporting the error from the second check.
+                    result = mandatory_result;
                 }
-
-                // If the second check failed, it failed due to a mandatory script verification
-                // flag, but the first check might have failed on a non-mandatory script
-                // verification flag.
-                //
-                // Avoid reporting a mandatory script check failure with a non-mandatory error
-                // string by reporting the error from the second check.
-                serror = check2.GetScriptError();
             }
 
             // MANDATORY flag failures correspond to
-            // TxValidationResult::TX_CONSENSUS.
-            return state.Invalid(TxValidationResult::TX_CONSENSUS, strprintf("mandatory-script-verify-flag-failed (%s)", ScriptErrorString(serror)));
+            return state.Invalid(TxValidationResult::TX_CONSENSUS, strprintf("mandatory-script-verify-flag-failed (%s)", ScriptErrorString(result->first)), result->second);
+
         }
     }
 
@@ -2924,8 +2936,8 @@ bool Chainstate::ConnectBlock(const CBlock& block, BlockValidationState& state, 
         for (const auto& tx : block.vtx) {
             for (size_t o = 0; o < tx->vout.size(); o++) {
                 if (view.HaveCoin(COutPoint(tx->GetHash(), o))) {
-                    LogPrintf("ERROR: ConnectBlock(): tried to overwrite transaction\n");
-                    return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-txns-BIP30");
+                    state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-txns-BIP30",
+                                  "tried to overwrite transaction");
                 }
             }
         }
@@ -2988,6 +3000,7 @@ bool Chainstate::ConnectBlock(const CBlock& block, BlockValidationState& state, 
 
     for (unsigned int i = 0; i < block.vtx.size(); i++)
     {
+        if (!state.IsValid()) break;
         const CTransaction &tx = *(block.vtx[i]);
 
         nInputs += tx.vin.size();
@@ -3002,15 +3015,19 @@ bool Chainstate::ConnectBlock(const CBlock& block, BlockValidationState& state, 
                         parallel_script_checks ? &vChecks : nullptr, fCacheResults, fScriptChecks, fedpegscripts)) {
                 // Any transaction validation failure in ConnectBlock is a block consensus failure
                 state.Invalid(BlockValidationResult::BLOCK_CONSENSUS,
-                            tx_state.GetRejectReason(), tx_state.GetDebugMessage());
-                LogError("%s: Consensus::CheckTxInputs: %s, %s\n", __func__, tx.GetHash().ToString(), state.ToString());
-                return false;
+                              tx_state.GetRejectReason(),
+                              tx_state.GetDebugMessage() + " in transaction " + tx.GetHash().ToString());
+                break;
             }
-            control.Add(vChecks);
-
+            // control.Add(vChecks);
+            //
+            // if (!MoneyRange(fee_map)) {
+            //     LogPrintf("ERROR: %s: accumulated fee in the block out of range.\n", __func__);
+            //     return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-txns-accumulated-fee-outofrange");
             if (!MoneyRange(fee_map)) {
-                LogPrintf("ERROR: %s: accumulated fee in the block out of range.\n", __func__);
-                return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-txns-accumulated-fee-outofrange");
+                state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-txns-accumulated-fee-outofrange",
+                              "accumulated fee in the block out of range");
+                break;
             }
 
             // Check that transaction is BIP68 final
@@ -3026,8 +3043,9 @@ bool Chainstate::ConnectBlock(const CBlock& block, BlockValidationState& state, 
             }
 
             if (!SequenceLocks(tx, nLockTimeFlags, prevheights, *pindex)) {
-                LogPrintf("ERROR: %s: contains a non-BIP68-final transaction\n", __func__);
-                return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-txns-nonfinal");
+                state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-txns-nonfinal",
+                              "contains a non-BIP68-final transaction " + tx.GetHash().ToString());
+                break;
             }
         }
 
@@ -3037,8 +3055,8 @@ bool Chainstate::ConnectBlock(const CBlock& block, BlockValidationState& state, 
         // * witness (when witness enabled in flags and excludes coinbase)
         nSigOpsCost += GetTransactionSigOpCost(tx, view, flags);
         if (nSigOpsCost > MAX_BLOCK_SIGOPS_COST) {
-            LogPrintf("ERROR: ConnectBlock(): too many sigops\n");
-            return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-blk-sigops");
+            state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-blk-sigops", "too many sigops");
+            break;
         }
 
         if (!tx.IsCoinBase())
@@ -3050,9 +3068,7 @@ bool Chainstate::ConnectBlock(const CBlock& block, BlockValidationState& state, 
                 // Any transaction validation failure in ConnectBlock is a block consensus failure
                 state.Invalid(BlockValidationResult::BLOCK_CONSENSUS,
                               tx_state.GetRejectReason(), tx_state.GetDebugMessage());
-                LogError("ConnectBlock(): CheckInputScripts on %s failed with %s\n",
-                    tx.GetHash().ToString(), state.ToString());
-                return false;
+                break;
             }
             control.Add(std::move(vChecks));
         }
@@ -3072,20 +3088,36 @@ bool Chainstate::ConnectBlock(const CBlock& block, BlockValidationState& state, 
              Ticks<SecondsDouble>(m_chainman.time_connect),
              Ticks<MillisecondsDouble>(m_chainman.time_connect) / m_chainman.num_blocks_total);
 
+    // todo: 
+    // CAmountMap block_reward = fee_map;
+    // block_reward[consensusParams.subsidy_asset] += GetBlockSubsidy(pindex->nHeight, consensusParams);
+    // if (!MoneyRange(block_reward)) {
+    //     LogPrintf("ERROR: ConnectBlock(): total block reward overflowed\n");
+    //     return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-blockreward-outofrange");
+    // }
+    // if (!VerifyCoinbaseAmount(*(block.vtx[0]), block_reward)) {
+    //     LogPrintf("ERROR: ConnectBlock(): coinbase pays too much\n");
+    //     return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-cb-amount");
+    
     CAmountMap block_reward = fee_map;
     block_reward[consensusParams.subsidy_asset] += GetBlockSubsidy(pindex->nHeight, consensusParams);
-    if (!MoneyRange(block_reward)) {
+    if (!MoneyRange(block_reward) && state.IsValid()) {
         LogPrintf("ERROR: ConnectBlock(): total block reward overflowed\n");
-        return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-blockreward-outofrange");
-    }
-    if (!VerifyCoinbaseAmount(*(block.vtx[0]), block_reward)) {
-        LogPrintf("ERROR: ConnectBlock(): coinbase pays too much\n");
-        return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-cb-amount");
+        state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-blockreward-outofrange");
     }
 
-    if (!control.Wait()) {
-        LogPrintf("ERROR: %s: CheckQueue failed\n", __func__);
-        return state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "block-validation-failed");
+    if (!VerifyCoinbaseAmount(*(block.vtx[0]), block_reward) && state.IsValid()) {
+        state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, "bad-cb-amount",
+                      strprintf("coinbase pays too much"));
+    }
+
+    auto parallel_result = control.Complete();
+    if (parallel_result.has_value() && state.IsValid()) {
+        state.Invalid(BlockValidationResult::BLOCK_CONSENSUS, strprintf("mandatory-script-verify-flag-failed (%s)", ScriptErrorString(parallel_result->first)), parallel_result->second);
+    }
+    if (!state.IsValid()) {
+        LogInfo("Block validation error: %s", state.ToString());
+        return false;
     }
     const auto time_4{SteadyClock::now()};
     m_chainman.time_verify += time_4 - time_2;
@@ -3095,8 +3127,9 @@ bool Chainstate::ConnectBlock(const CBlock& block, BlockValidationState& state, 
              Ticks<SecondsDouble>(m_chainman.time_verify),
              Ticks<MillisecondsDouble>(m_chainman.time_verify) / m_chainman.num_blocks_total);
 
-    if (fJustCheck)
+    if (fJustCheck) {
         return true;
+    }
 
     if (!m_blockman.WriteUndoDataForBlock(blockundo, state, *pindex)) {
         return false;

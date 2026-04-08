@@ -1325,7 +1325,7 @@ class TaprootTest(BitcoinTestFramework):
         # ELEMENTS: to preserve tests which depend on the exact number of outputs,
         #  we turn one of the original outputs into a fee output, which routinely
         #  results in us burning massive amounts of coin. Hence -maxtxfee.
-        self.extra_args = [["-par=1", "-maxtxfee=100.0"]] * self.num_nodes
+        self.extra_args = [["-maxtxfee=100.0"]] * self.num_nodes
         # ELEMENTS: both nodes have Simplicity active. We activate one with evbparams
         # and the other with vbparams to check that both work.
         self.extra_args[0].append("-vbparams=simplicity:-1:1")

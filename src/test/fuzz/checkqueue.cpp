@@ -19,9 +19,10 @@ struct DumbCheck {
     {
     }
 
-    bool operator()() const
+    std::optional<int> operator()() const
     {
-        return result;
+        if (result) return std::nullopt;
+        return 1;
     }
 };
 } // namespace
@@ -47,7 +48,7 @@ FUZZ_TARGET(checkqueue)
         for (auto check : checks_1) delete check;
     }
     if (fuzzed_data_provider.ConsumeBool()) {
-        (void)check_queue_1.Wait();
+        (void)check_queue_1.Complete();
     }
 
     CCheckQueueControl<DumbCheck> check_queue_control{&check_queue_2};
@@ -57,6 +58,6 @@ FUZZ_TARGET(checkqueue)
         for (auto check : checks_2) delete check;
     }
     if (fuzzed_data_provider.ConsumeBool()) {
-        (void)check_queue_control.Wait();
+        (void)check_queue_control.Complete();
     }
 }

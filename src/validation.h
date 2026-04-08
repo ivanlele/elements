@@ -358,9 +358,7 @@ public:
     CScriptCheck(CScriptCheck&&) = default;
     CScriptCheck& operator=(CScriptCheck&&) = default;
 
-    bool operator()() override;
-
-    ScriptError GetScriptError() const { return error; }
+    std::optional<std::pair<ScriptError, std::string>> operator()() override;
 };
 
 // CScriptCheck is used a lot in std::vector, make sure that's efficient
