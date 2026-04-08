@@ -141,6 +141,36 @@ VERBOSE=1
 
 echo start > merge.log
 
+# Check whether every file changed since $1 matches an ignore pattern.
+# Returns 0 (true) when build/test can be skipped.
+# Keep in sync with contrib/ignore-changes.txt.
+all_changes_ignorable() {
+    local base_commit="$1"
+
+    local changed_files
+    changed_files=$(git diff --name-only "$base_commit" HEAD) || return 1
+
+    if [[ -z "$changed_files" ]]; then
+        return 0
+    fi
+
+    # Single extended regex that covers all three categories.
+    # Extensions (suffix match)
+    local re_ext='\.(md|rst|mediawiki|png|jpg|jpeg|gif|svg|ico|bmp|xpm|1|pub|ttf)$'
+    # Folder prefixes
+    local re_dir='^(\.github/|\.tx/|build-aux/|build_msvc/|ci/|contrib/|depends/|doc/|share/pixmaps/|share/qt/|share/examples/|test/lint/|test/bitcoin_functional/)'
+    # Exact file paths
+    local re_file='^(COPYING|\.editorconfig|\.gitignore|\.gitattributes|\.python-version|\.style\.yapf|\.cirrus\.yml|CMakePresets\.json|vcpkg\.json|libbitcoinkernel\.pc\.in|share/setup\.nsi\.in|test/get_previous_releases\.py)$'
+
+    local pattern="${re_ext}|${re_dir}|${re_file}"
+
+    # If any file does NOT match, build/test is required.
+    if echo "$changed_files" | grep -qvE "$pattern"; then
+        return 1
+    fi
+    return 0
+}
+
 quietly () {
     if [[ "$VERBOSE" == "1" ]]; then
 	date | tee --append merge.log
@@ -226,6 +256,20 @@ do
     else
         echo -e "Start merge/build of \e[37m$PR_ID\e[0m at $(date)"
         git -C "$WORKTREE" merge "$HASH" --no-ff -m "Merge $HASH into merged_master ($CHAIN PR $REPO$PR_ID)" || notify "fail merge" 1
+    fi
+
+    # Skip build/test if every changed file is ignorable
+    if all_changes_ignorable "$GIT_HEAD"; then
+        echo -e "\e[32mAll changes in $PR_ID match ignore-changes.txt — skipping build/test\e[0m"
+        if [[ "$KEEP_GOING" == "0" ]]; then
+            notify "$PR_ID done (skip build/test), exiting"
+            exit 0
+        else
+            echo "$PR_ID done (skip build/test), continuing"
+        fi
+        SKIP_MERGE=0
+        echo "end" >> merge.log
+        continue
     fi
 
     if [[ "$DO_BUILD" == "1" ]]; then
