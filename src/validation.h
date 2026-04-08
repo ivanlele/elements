@@ -88,6 +88,8 @@ static const uint64_t MIN_DISK_SPACE_FOR_BLOCK_FILES = 550 * 1024 * 1024;
  *  Note that Elements-based parent chains may not have fixes based on this
  *  version check! */
 static const int MIN_MAINCHAIN_NODE_VERSION = 160300; // 0.16.3
+/** Maximum number of dedicated script-checking threads allowed */
+static constexpr int MAX_SCRIPTCHECK_THREADS{15};
 
 /** Current sync state passed to tip changed callbacks. */
 enum class SynchronizationState {
