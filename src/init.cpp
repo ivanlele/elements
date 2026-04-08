@@ -949,7 +949,7 @@ bool AppInitParameterInteraction(const ArgsManager& args)
     }
     bilingual_str errors;
     for (const auto& arg : args.GetUnsuitableSectionOnlyArgs()) {
-        errors += strprintf(_("Config setting for %s only applied on %s network when in [%s] section.") + Untranslated("\n"), arg, chain.chain_name, chain.chain_name);
+        errors += strprintf(_("Config setting for %s only applied on %s network when in [%s] section."), arg, chain.chain_name, chain.chain_name) + Untranslated("\n");
     }
 
     if (!errors.empty()) {
@@ -1349,7 +1349,7 @@ static ChainstateLoadResult InitAndLoadChainstate(
     try {
         node.chainman = std::make_unique<ChainstateManager>(*Assert(node.shutdown_signal), chainman_opts, blockman_opts);
     } catch (std::exception& e) {
-        return {ChainstateLoadStatus::FAILURE_FATAL, strprintf(Untranslated("Failed to initialize ChainstateManager: %s"), e.what())};
+        return {ChainstateLoadStatus::FAILURE_FATAL, Untranslated(strprintf("Failed to initialize ChainstateManager: %s", e.what()))};
     }
     ChainstateManager& chainman = *node.chainman;
     // This is defined and set here instead of inline in validation.h to avoid a hard
@@ -1491,7 +1491,7 @@ bool AppInitMain(NodeContext& node, interfaces::BlockAndHeaderTipInfo* tip_info)
             try {
                 ipc->listenAddress(address);
             } catch (const std::exception& e) {
-                return InitError(strprintf(Untranslated("Unable to bind to IPC address '%s'. %s"), address, e.what()));
+                return InitError(Untranslated(strprintf("Unable to bind to IPC address '%s'. %s", address, e.what())));
             }
             LogPrintf("Listening for IPC requests on address %s\n", address);
         }
@@ -2259,7 +2259,7 @@ bool StartIndexBackgroundSync(NodeContext& node)
         const CBlockIndex* start_block = *indexes_start_block;
         if (!start_block) start_block = chainman.ActiveChain().Genesis();
         if (!chainman.m_blockman.CheckBlockDataAvailability(*index_chain.Tip(), *Assert(start_block))) {
-            return InitError(strprintf(Untranslated("%s best block of the index goes beyond pruned data. Please disable the index or reindex (which will download the whole blockchain again)"), older_index_name));
+            return InitError(Untranslated(strprintf("%s best block of the index goes beyond pruned data. Please disable the index or reindex (which will download the whole blockchain again)", older_index_name)));
         }
     }
 
