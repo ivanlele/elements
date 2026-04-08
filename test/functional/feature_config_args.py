@@ -70,7 +70,7 @@ class ConfArgsTest(BitcoinTestFramework):
 
         self.log.debug('Verifying garbage in config can be detected')
         with open(conf_path, 'a', encoding='utf-8') as conf:
-            conf.write(f'garbage\n')
+            conf.write('garbage\n')
         self.nodes[0].assert_start_raises_init_error(
             expected_msg='Error: Error reading configuration file: parse error on line 1: garbage',
         )
