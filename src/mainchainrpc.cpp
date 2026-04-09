@@ -103,8 +103,8 @@ UniValue CallMainChainRPC(const std::string& strMethod, const UniValue& params)
         // Try fall back to cookie-based authentication if no password is provided
         if (!GetMainchainAuthCookie(&strRPCUserColonPass)) {
             throw std::runtime_error(strprintf(
-                _("Could not locate mainchain RPC credentials. No authentication cookie could be found, and no mainchainrpcpassword is set in the configuration file (%s)").translated,
-                    gArgs.GetArg("-conf", BITCOIN_CONF_FILENAME).c_str()));
+                _("Could not locate mainchain RPC credentials. No authentication cookie could be found, and no mainchainrpcpassword is set in the configuration file (%s)"),
+                    gArgs.GetArg("-conf", BITCOIN_CONF_FILENAME).c_str()).translated);
         }
     } else {
         strRPCUserColonPass = gArgs.GetArg("-mainchainrpcuser", "") + ":" + gArgs.GetArg("-mainchainrpcpassword", "");
