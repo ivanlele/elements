@@ -78,25 +78,25 @@ std::unique_ptr<CBaseChainParams> CreateBaseChainParams(const ChainTypeMeta chai
 {
     switch (chain.chain_type) {
     case ChainType::MAIN:
-        return std::make_unique<CBaseChainParams>("", 8332, 18332, 8334);
+        return std::make_unique<CBaseChainParams>("", 8332, 18332);
     case ChainType::TESTNET:
-        return std::make_unique<CBaseChainParams>("testnet3", 18332, 8332, 18334);
+        return std::make_unique<CBaseChainParams>("testnet3", 18332, 8332);
     case ChainType::TESTNET4:
-        return std::make_unique<CBaseChainParams>("testnet4", 48332, 8332, 48334);
+        return std::make_unique<CBaseChainParams>("testnet4", 48332, 8332);
     case ChainType::SIGNET:
-        return std::make_unique<CBaseChainParams>("signet", 38332, 18332, 38334);
+        return std::make_unique<CBaseChainParams>("signet", 38332, 18332);
     case ChainType::REGTEST:
-        return std::make_unique<CBaseChainParams>("regtest", 18443, 18332, 18445);
+        return std::make_unique<CBaseChainParams>("regtest", 18443, 18332);
     case ChainType::LIQUID1:
-        return std::make_unique<CBaseChainParams>("liquidv1", 7041, 8332, 37041);
+        return std::make_unique<CBaseChainParams>("liquidv1", 7041, 8332);
     case ChainType::LIQUID1TEST:
-        return std::make_unique<CBaseChainParams>("liquidv1test", 7040, 18332, 37040);  // Use same ports as customparams
+        return std::make_unique<CBaseChainParams>("liquidv1test", 7040, 18332);  // Use same ports as customparams
     case ChainType::LIQUIDTESTNET:
-        return std::make_unique<CBaseChainParams>("liquidtestnet", 7039, 18331, 37039);
+        return std::make_unique<CBaseChainParams>("liquidtestnet", 7039, 18331);
     case ChainType::CUSTOM:
-        return std::make_unique<CBaseChainParams>(chain.chain_name, 7040, 18332, 37040);
+        return std::make_unique<CBaseChainParams>(chain.chain_name, 7040, 18332);
     }
-    return std::make_unique<CBaseChainParams>(chain.chain_name, 7040, 18332, 37040);
+    return std::make_unique<CBaseChainParams>(chain.chain_name, 7040, 18332);
 }
 
 void SelectBaseParams(const ChainTypeMeta chain)
