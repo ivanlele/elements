@@ -253,6 +253,7 @@ do
 
     if [[ "$SKIP_MERGE" == "1" ]]; then
         echo -e "Continuing build of \e[37m$PR_ID\e[0m at $(date)"
+        GIT_HEAD=$(git rev-parse HEAD^1)
     else
         echo -e "Start merge/build of \e[37m$PR_ID\e[0m at $(date)"
         git -C "$WORKTREE" merge "$HASH" --no-ff -m "Merge $HASH into merged_master ($CHAIN PR $REPO$PR_ID)" || notify "fail merge" 1
