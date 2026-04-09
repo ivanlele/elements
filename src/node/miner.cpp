@@ -119,8 +119,11 @@ void BlockAssembler::resetBlock()
     nFees = 0;
 }
 
-std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& scriptPubKeyIn, std::chrono::seconds min_tx_age, DynaFedParamEntry* proposed_entry, const std::vector<CScript>* commit_scripts)
+std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock()
 {
+    const auto& min_tx_age = m_options.min_tx_age;
+    const auto& proposed_entry = m_options.proposed_entry;
+    const auto& commit_scripts = m_options.commit_scripts;
     assert(min_tx_age >= std::chrono::seconds(0));
     const auto time_start{SteadyClock::now()};
 
@@ -153,7 +156,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     // ELEMENTS:
     if (DeploymentActiveAfter(pindexPrev, m_chainstate.m_chainman, Consensus::DEPLOYMENT_DYNA_FED)) {
         const DynaFedParamEntry current_params = ComputeNextBlockCurrentParameters(m_chainstate.m_chain.Tip(), chainparams.GetConsensus());
-        const DynaFedParams block_params(current_params, proposed_entry ? *proposed_entry : DynaFedParamEntry());
+        const DynaFedParams block_params(current_params, proposed_entry);
         pblock->m_dynafed_params = block_params;
         nBlockWeight += ::GetSerializeSize(block_params) * WITNESS_SCALE_FACTOR;
         nBlockWeight += current_params.m_signblock_witness_limit; // Note witness discount
@@ -184,7 +187,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     coinbaseTx.vin.resize(1);
     coinbaseTx.vin[0].prevout.SetNull();
     coinbaseTx.vout.resize(1);
-    coinbaseTx.vout[0].scriptPubKey = scriptPubKeyIn;
+    coinbaseTx.vout[0].scriptPubKey = m_options.coinbase_output_script;
     coinbaseTx.vout[0].nAsset = policyAsset;
     coinbaseTx.vout[0].nValue = nFees + GetBlockSubsidy(nHeight, chainparams.GetConsensus());
     if (g_con_elementsmode) {
@@ -199,8 +202,8 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     }
     coinbaseTx.vin[0].scriptSig = CScript() << nHeight << OP_0;
     // Non-consensus commitment output before finishing coinbase transaction
-    if (commit_scripts && !commit_scripts->empty()) {
-        for (const auto& commit_script: *commit_scripts) {
+    if (!commit_scripts.empty()) {
+        for (const auto& commit_script: commit_scripts) {
             coinbaseTx.vout.insert(std::prev(coinbaseTx.vout.end()), CTxOut(policyAsset, 0, commit_script));
         }
     }
