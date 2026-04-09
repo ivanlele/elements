@@ -4284,6 +4284,14 @@ void CWalletTx::GetNonIssuanceBlindingData(const CWallet& wallet, const unsigned
         blinding_pubkey_out, value_out, value_factor_out, asset_out, asset_factor_out);
 }
 
+bool CWallet::HaveCryptedKeys() const
+{
+    for (const auto& spkm : GetAllScriptPubKeyMans()) {
+        if (spkm->HaveCryptedKeys()) return true;
+    }
+    return false;
+}
+
 void CWallet::ConnectScriptPubKeyManNotifiers()
 {
     for (const auto& spk_man : GetActiveScriptPubKeyMans()) {

@@ -1047,6 +1047,7 @@ public:
     bool WithEncryptionKey(std::function<bool (const CKeyingMaterial&)> cb) const override;
 
     bool HasEncryptionKeys() const override;
+    bool HaveCryptedKeys() const;
 
     /** Get last block processed height */
     int GetLastBlockHeight() const EXCLUSIVE_LOCKS_REQUIRED(cs_wallet)
