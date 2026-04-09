@@ -119,6 +119,9 @@ BasicTestingSetup::BasicTestingSetup(const ChainType chainType, TestOpts opts, c
         gArgs.SoftSetBoolArg("-validatepegin", false);
     }
 
+    if constexpr (!G_FUZZING) {
+        SeedRandomForTest(SeedRand::FIXED_SEED);
+    }
     m_node.shutdown_signal = &m_interrupt;
     m_node.shutdown_request = [this]{ return m_interrupt(); };
     m_node.args = &gArgs;
@@ -149,8 +152,6 @@ BasicTestingSetup::BasicTestingSetup(const ChainType chainType, TestOpts opts, c
             throw std::runtime_error{error};
         }
     }
-
-    SeedRandomForTest(SeedRand::FIXED_SEED);
 
     const std::string test_name{G_TEST_GET_FULL_NAME ? G_TEST_GET_FULL_NAME() : ""};
     if (!m_node.args->IsArgSet("-testdatadir")) {
