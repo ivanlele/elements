@@ -91,10 +91,8 @@ else
 fi
 
 if [ -z "$NO_DEPENDS" ]; then
-  if [[ $CI_IMAGE_NAME_TAG == *centos* ]] || [[ $CI_IMAGE_NAME_TAG == *rocky* ]]; then
-    SHELL_OPTS="CONFIG_SHELL=/bin/dash"
-    # shellcheck disable=SC1090
-    source "/opt/rh/gcc-toolset-${STREAM_GCC_V}/enable"
+  if [[ $CI_IMAGE_NAME_TAG == *centos* ] || [[ $CI_IMAGE_NAME_TAG == *rocky* ]]; then
+    SHELL_OPTS="CONFIG_SHELL=/bin/ksh"  # Temporarily use ksh instead of dash, until https://bugzilla.redhat.com/show_bug.cgi?id=2335416 is fixed.
   else
     SHELL_OPTS="CONFIG_SHELL="
   fi
