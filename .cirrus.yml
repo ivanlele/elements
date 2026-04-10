@@ -146,14 +146,12 @@ task:
     FILE_ENV: "./ci/test/00_setup_env_win64.sh"
 
 task:
-  name: '32-bit Rocky9, dash, gui'
+  name: 'CentOS, dash, gui'
   << : *GLOBAL_TASK_TEMPLATE
   container:
     image: quay.io/rockylinux/rockylinux:9
   env:
-    << : *CIRRUS_EPHEMERAL_WORKER_TEMPLATE_ENV
-    PACKAGE_MANAGER_INSTALL: "dnf update -y && dnf install -y"
-    FILE_ENV: "./ci/test/00_setup_env_i686_centos.sh"
+    FILE_ENV: "./ci/test/00_setup_env_native_centos.sh"
 
 task:
   name: 'previous releases, depends DEBUG'
