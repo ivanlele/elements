@@ -93,17 +93,21 @@ elif [[ "$1" == "step-fuzz" ]]; then
     KEEP_GOING=0
     DO_BUILD=0
     DO_TEST=0
+elif [[ "$1" == "count" ]]; then
+    DO_BUILD=0
+    DO_TEST=0
 elif [[ "$1" == "analyze" ]]; then
     DO_BUILD=0
     DO_TEST=0
 else
-    echo "Usage: $0 <setup|list-only|go|continue|step|step-continue|analyze>"
+    echo "Usage: $0 <setup|list-only|count|go|continue|step|step-continue|analyze>"
     echo "    setup will configure your repository for the first run of this script"
     echo "    list-only will simply list all the PRs yet to be done"
     echo "    go will try to merge every PR, building/testing each"
     echo "    continue assumes the first git-merge has already happened, and starts with building"
     echo "    step will try to merge/build/test a single PR"
     echo "    step-continue assumes the first git-merge has already happened, and will try to build/test a single PR"
+    echo "    count will count how many PRs remain before hitting a stopper"
     echo "    analyze will analyze the next $NUM PRs and count conflicts NB: DO NOT CTRL+C THIS PROCESS"
     echo
     echo "Prior to use, please create a git worktree for the elements repo at:"
@@ -193,6 +197,27 @@ notify () {
     fi
 }
 
+# Handle 'count' command separately (avoids subshell variable issues).
+if [[ "$1" == "count" ]]; then
+    STOPPERS=(
+        "#32025" # bitcoin v29
+    )
+    COUNT=0
+    while read -r line; do
+        [[ -z "$line" ]] && continue
+        PR_ID=$(echo "$line" | grep -o -P "#\d+" || true)
+        for STOPPER in "${STOPPERS[@]}"; do
+            if [[ "$PR_ID" == *"$STOPPER"* ]]; then
+                echo "$COUNT PRs remaining before stopper $STOPPER ($PR_ID)"
+                exit 0
+            fi
+        done
+        COUNT=$((COUNT + 1))
+    done < <(echo "$COMMITS" | tac)
+    echo "$COUNT PRs total (no stopper found)"
+    exit 0
+fi
+
 ## Sort by unix timestamp and iterate over them
 echo "$COMMITS" | tac | while read -r line
 do
@@ -237,8 +262,7 @@ do
     # a stopper is normally the PR after the version has been changed
     # ie. the branch point we want to stop at for this version
     STOPPERS=(
-        "#30716" # bitcoin v28
-        "#32041" # bitcoin v29
+        "#32252" # bitcoin v29
     )
     for STOPPER in "${STOPPERS[@]}"
     do
