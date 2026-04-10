@@ -882,8 +882,8 @@ BOOST_AUTO_TEST_CASE(descriptor_test)
             },
             XONLY_KEYS,
             {
-                {{"51200e3c14456bfa30f9f0bed6e55f35e1e9ca17c835e9f71b25bac0dfaab38ff2cd"}},
-                {{"51202bdda29337ecaf8fcd5aa395febac6f99b8a866a0e8fb3f7bde2e24b1a7df2ba"}},
+                {{"512076575b8c6894c21766a91878f14a50eb48bfac8b0ac89c139e40ac18cecbf581"}},
+                {{"5120117efbd5e4cdcd093a64c3b116469b70afecd141820591aa7ab7c7e6b682dd38"}},
             },
             OutputType::BECH32M,
             {
