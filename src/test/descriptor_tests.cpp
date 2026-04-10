@@ -62,6 +62,15 @@ bool EqualDescriptor(std::string a, std::string b)
     return a == b;
 }
 
+bool EqualSigningProviders(const FlatSigningProvider& a, const FlatSigningProvider& b)
+{
+    return a.scripts == b.scripts
+        && a.pubkeys == b.pubkeys
+        && a.origins == b.origins
+        && a.keys == b.keys
+        && a.tr_trees == b.tr_trees;
+}
+
 std::string UseHInsteadOfApostrophe(const std::string& desc)
 {
     std::string ret = desc;
@@ -214,6 +223,15 @@ void DoCheck(std::string prv, std::string pub, const std::string& norm_pub, int 
             BOOST_CHECK_MESSAGE(EqualDescriptor(prv, prv1), "Private ser: " + prv1 + " Private desc: " + prv);
         }
         BOOST_CHECK(!parse_pub->ToPrivateString(keys_pub, prv1));
+
+        // Check that both can ExpandPrivate and get the same SigningProviders
+        FlatSigningProvider priv_prov;
+        parse_priv->ExpandPrivate(0, keys_priv, priv_prov);
+
+        FlatSigningProvider pub_prov;
+        parse_pub->ExpandPrivate(0, keys_priv, pub_prov);
+
+        BOOST_CHECK_MESSAGE(EqualSigningProviders(priv_prov, pub_prov), "Private desc: " + prv + " Pub desc: " + pub);
     }
 
     // Check that private can produce the normalized descriptors
@@ -807,6 +825,32 @@ BOOST_AUTO_TEST_CASE(descriptor_test)
                 {{0x80000000UL + 48, 0x80000000UL + 1, 0x80000000UL, 0x80000000UL + 2, 0, 0}, {0x80000000UL + 48, 0x80000000UL + 1, 0x80000000UL, 0x80000000UL + 2, 0, 1}, {0x80000000UL + 48, 0x80000000UL + 1, 0x80000000UL, 0x80000000UL + 2, 0, 2}},
                 {{0x80000000UL + 48, 0x80000000UL + 1, 0x80000000UL, 0x80000000UL + 2, 1, 0}, {0x80000000UL + 48, 0x80000000UL + 1, 0x80000000UL, 0x80000000UL + 2, 1, 1}, {0x80000000UL + 48, 0x80000000UL + 1, 0x80000000UL, 0x80000000UL + 2, 1, 2}},
             }
+    );
+    // fix
+    CheckMultipath("tr(xprv9yYge4PS54XkYT9KiLfCRwc8Jeuz8DucxQGtuEecJZYhKNiqbPxYHTPzXtskmzWBqdqkRAGsghNmZzNsfU2wstaB3XjDQFPv567aQSSuPyo,l:pk(xprvA1ADjaN8H3HGnZSmt4VF7YdWoV9oNq8jhqhurxsrYycBAFK555cECoaY22KWt6BTRNLuvobW5VQTF89PN3iA485LAg7epazevPyjCa4xTzd/<2;3>))",
+        "tr(xpub6CY33ZvKuS63kwDnpNCCo5YrrgkUXgdUKdCVhd4Dru5gCB3z8wGnqFiUP98Za5pYSYF5KmvBHTY3Ra8FAJGggzBjuHS69WzN8gscPupuZwK,l:pk(xpub6E9a95u27Qqa13XEz62FUgaFMWzHnHrb54dWfMHU7K9A33eDccvUkbu1sHYoByHAgJdR326rWqn9pGZgZHz1afDprW5gGwS4gUX8Ri6aGPZ/<2;3>))",
+        {
+            "tr(xprv9yYge4PS54XkYT9KiLfCRwc8Jeuz8DucxQGtuEecJZYhKNiqbPxYHTPzXtskmzWBqdqkRAGsghNmZzNsfU2wstaB3XjDQFPv567aQSSuPyo,l:pk(xprvA1ADjaN8H3HGnZSmt4VF7YdWoV9oNq8jhqhurxsrYycBAFK555cECoaY22KWt6BTRNLuvobW5VQTF89PN3iA485LAg7epazevPyjCa4xTzd/2))",
+            "tr(xprv9yYge4PS54XkYT9KiLfCRwc8Jeuz8DucxQGtuEecJZYhKNiqbPxYHTPzXtskmzWBqdqkRAGsghNmZzNsfU2wstaB3XjDQFPv567aQSSuPyo,l:pk(xprvA1ADjaN8H3HGnZSmt4VF7YdWoV9oNq8jhqhurxsrYycBAFK555cECoaY22KWt6BTRNLuvobW5VQTF89PN3iA485LAg7epazevPyjCa4xTzd/3))",
+        },
+        {
+            "tr(xpub6CY33ZvKuS63kwDnpNCCo5YrrgkUXgdUKdCVhd4Dru5gCB3z8wGnqFiUP98Za5pYSYF5KmvBHTY3Ra8FAJGggzBjuHS69WzN8gscPupuZwK,l:pk(xpub6E9a95u27Qqa13XEz62FUgaFMWzHnHrb54dWfMHU7K9A33eDccvUkbu1sHYoByHAgJdR326rWqn9pGZgZHz1afDprW5gGwS4gUX8Ri6aGPZ/2))",
+            "tr(xpub6CY33ZvKuS63kwDnpNCCo5YrrgkUXgdUKdCVhd4Dru5gCB3z8wGnqFiUP98Za5pYSYF5KmvBHTY3Ra8FAJGggzBjuHS69WzN8gscPupuZwK,l:pk(xpub6E9a95u27Qqa13XEz62FUgaFMWzHnHrb54dWfMHU7K9A33eDccvUkbu1sHYoByHAgJdR326rWqn9pGZgZHz1afDprW5gGwS4gUX8Ri6aGPZ/3))",
+        },
+        {
+            "tr(xpub6CY33ZvKuS63kwDnpNCCo5YrrgkUXgdUKdCVhd4Dru5gCB3z8wGnqFiUP98Za5pYSYF5KmvBHTY3Ra8FAJGggzBjuHS69WzN8gscPupuZwK,l:pk(xpub6E9a95u27Qqa13XEz62FUgaFMWzHnHrb54dWfMHU7K9A33eDccvUkbu1sHYoByHAgJdR326rWqn9pGZgZHz1afDprW5gGwS4gUX8Ri6aGPZ/2))",
+            "tr(xpub6CY33ZvKuS63kwDnpNCCo5YrrgkUXgdUKdCVhd4Dru5gCB3z8wGnqFiUP98Za5pYSYF5KmvBHTY3Ra8FAJGggzBjuHS69WzN8gscPupuZwK,l:pk(xpub6E9a95u27Qqa13XEz62FUgaFMWzHnHrb54dWfMHU7K9A33eDccvUkbu1sHYoByHAgJdR326rWqn9pGZgZHz1afDprW5gGwS4gUX8Ri6aGPZ/3))",
+        },
+        XONLY_KEYS,
+        {
+            {{"51201d65cee57663a4a9fef59b7629138272e5806be8e71edc7d1d967658d25b733b"}},
+            {{"5120e788a0164c64831bb166ba79e8ab3bd3605c221e0e390619c6b6346d40fe3cf2"}},
+        },
+        OutputType::BECH32M,
+        {
+            {{2}, {}},
+            {{3}, {}},
+        }
     );
     CheckUnparsable("pkh(xprv9s21ZrQH143K31xYSDQpPDxsXRTUcvj2iNHm5NUtrGiGG5e2DtALGdso3pGz6ssrdK4PFmM8NSpSBHNqPqm55Qn3LqFtT2emdEXVYsCzC2U/<0;1>/<2;3>)", "pkh(xpub661MyMwAqRbcFW31YEwpkMuc5THy2PSt5bDMsktWQcFF8syAmRUapSCGu8ED9W6oDMSgv6Zz8idoc4a6mr8BDzTJY47LJhkJ8UB7WEGuduB/<0;1>/<2;3>)", "pkh(): Multiple multipath key path specifiers found");
     CheckUnparsable("pkh([deadbeef/<0;1>]xprv9s21ZrQH143K31xYSDQpPDxsXRTUcvj2iNHm5NUtrGiGG5e2DtALGdso3pGz6ssrdK4PFmM8NSpSBHNqPqm55Qn3LqFtT2emdEXVYsCzC2U/0)", "pkh([deadbeef/<0;1>]xpub661MyMwAqRbcFW31YEwpkMuc5THy2PSt5bDMsktWQcFF8syAmRUapSCGu8ED9W6oDMSgv6Zz8idoc4a6mr8BDzTJY47LJhkJ8UB7WEGuduB/0)", "pkh(): Key path value \'<0;1>\' specifies multipath in a section where multipath is not allowed");
