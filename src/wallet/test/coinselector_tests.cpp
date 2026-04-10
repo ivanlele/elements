@@ -32,9 +32,13 @@ BOOST_FIXTURE_TEST_SUITE(coinselector_tests, WalletTestingSetup)
 
 typedef std::set<std::shared_ptr<COutput>> CoinSet;
 // ELEMENTS
-static node::NodeContext testNode;
-static auto testChain = interfaces::MakeChain(testNode);
-static wallet::CWallet testWallet(testChain.get(), "", CreateMockableWalletDatabase());
+static wallet::CWallet& getTestWallet()
+{
+    static node::NodeContext testNode;
+    static auto testChain = interfaces::MakeChain(testNode);
+    static wallet::CWallet testWallet(testChain.get(), "", CreateMockableWalletDatabase());
+    return testWallet;
+}
 
 static const CoinEligibilityFilter filter_standard(1, 6, 0);
 static const CoinEligibilityFilter filter_confirmed(1, 1, 0);
@@ -48,7 +52,7 @@ static void add_coin(const CAmount& nValue, int nInput, std::vector<COutput>& se
     tx.vout[nInput].nValue = nValue;
     tx.nLockTime = nextLockTime++;        // so all transactions get different hashes
     CWalletTx wtx(MakeTransactionRef(tx), TxStateInactive{});
-    set.emplace_back(testWallet, wtx, COutPoint(tx.GetHash(), nInput), tx.vout.at(nInput), /*depth=*/ 1, /*input_bytes=*/ -1, /*spendable=*/ true, /*solvable=*/ true, /*safe=*/ true, /*time=*/ 0, /*from_me=*/ false);
+    set.emplace_back(getTestWallet(), wtx, COutPoint(tx.GetHash(), nInput), tx.vout.at(nInput), /*depth=*/ 1, /*input_bytes=*/ -1, /*spendable=*/ true, /*solvable=*/ true, /*safe=*/ true, /*time=*/ 0, /*from_me=*/ false);
 }
 
 static void add_coin(const CAmount& nValue, int nInput, SelectionResult& result)
@@ -58,7 +62,7 @@ static void add_coin(const CAmount& nValue, int nInput, SelectionResult& result)
     tx.vout[nInput].nValue = nValue;
     tx.nLockTime = nextLockTime++;        // so all transactions get different hashes
     CWalletTx wtx(MakeTransactionRef(tx), TxStateInactive{});
-    COutput output(testWallet, wtx, COutPoint(tx.GetHash(), nInput), tx.vout.at(nInput), /*depth=*/ 1, /*input_bytes=*/ -1, /*spendable=*/ true, /*solvable=*/ true, /*safe=*/ true, /*time=*/ 0, /*from_me=*/ false);
+    COutput output(getTestWallet(), wtx, COutPoint(tx.GetHash(), nInput), tx.vout.at(nInput), /*depth=*/ 1, /*input_bytes=*/ -1, /*spendable=*/ true, /*solvable=*/ true, /*safe=*/ true, /*time=*/ 0, /*from_me=*/ false);
     OutputGroup group;
     group.Insert(std::make_shared<COutput>(output), /*ancestors=*/ 0, /*descendants=*/ 0);
     result.AddInput(group);
@@ -71,7 +75,7 @@ static void add_coin(const CAmount& nValue, int nInput, SelectionResult& result,
     tx.vout[nInput].nValue = nValue;
     tx.nLockTime = nextLockTime++;        // so all transactions get different hashes
     CWalletTx wtx(MakeTransactionRef(tx), TxStateInactive{});
-    std::shared_ptr<COutput> coin = std::make_shared<COutput>(testWallet, wtx, COutPoint(tx.GetHash(), nInput), tx.vout.at(nInput), /*depth=*/ 1, /*input_bytes=*/ 148, /*spendable=*/ true, /*solvable=*/ true, /*safe=*/ true, /*time=*/ 0, /*from_me=*/ false, fee);
+    std::shared_ptr<COutput> coin = std::make_shared<COutput>(getTestWallet(), wtx, COutPoint(tx.GetHash(), nInput), tx.vout.at(nInput), /*depth=*/ 1, /*input_bytes=*/ 148, /*spendable=*/ true, /*solvable=*/ true, /*safe=*/ true, /*time=*/ 0, /*from_me=*/ false, fee);
     OutputGroup group;
     group.Insert(coin, /*ancestors=*/ 0, /*descendants=*/ 0);
     coin->long_term_fee = long_term_fee; // group.Insert() will modify long_term_fee, so we need to set it afterwards
