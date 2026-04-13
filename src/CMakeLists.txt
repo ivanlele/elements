@@ -157,6 +157,7 @@ add_library(bitcoin_common STATIC EXCLUDE_FROM_ALL
   blind.cpp
   blindpsbt.cpp
   block_proof.cpp
+  chain.cpp
   chainparams.cpp
   chainparamsbase.cpp
   coins.cpp
@@ -191,6 +192,7 @@ add_library(bitcoin_common STATIC EXCLUDE_FROM_ALL
   outputtype.cpp
   policy/feerate.cpp
   policy/policy.cpp
+  pow.cpp
   protocol.cpp
   psbt.cpp
   rpc/external_signer.cpp
@@ -248,7 +250,6 @@ add_library(bitcoin_node STATIC EXCLUDE_FROM_ALL
   blockencodings.cpp
   blockfilter.cpp
   block_proof.cpp
-  chain.cpp
   confidential_validation.cpp
   consensus/tx_verify.cpp
   dynafed.cpp
@@ -314,7 +315,6 @@ add_library(bitcoin_node STATIC EXCLUDE_FROM_ALL
   policy/rbf.cpp
   policy/settings.cpp
   policy/truc_policy.cpp
-  pow.cpp
   primitives/pak.cpp
   rest.cpp
   rpc/blockchain.cpp
