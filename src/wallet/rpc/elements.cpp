@@ -204,24 +204,11 @@ RPCHelpMan getpeginaddress()
         }
         throw JSONRPCError(RPC_INTERNAL_ERROR, message);
     }
-    auto context = pwallet->chain().context();
-    node::KernelNotifications notifications(context->shutdown_request, context->exit_status, *Assert(context->warnings));
-    ChainstateManager::Options chain_opts{
-        .chainparams = chainparams,
-        .datadir = gArgs.GetDataDirNet(),
-        .minimum_chain_work = UintToArith256(consensus.nMinimumChainWork),
-        .assumed_valid_block = consensus.defaultAssumeValid,
-        .notifications = notifications,
-    };
-    node::BlockManager::Options block_opts{
-        .chainparams = chain_opts.chainparams,
-        .blocks_dir = gArgs.GetBlocksDirPath(),
-        .notifications = chain_opts.notifications,
-    };
     CTxDestination mainchain_dest(WitnessV0ScriptHash(calculate_contract(fedpegscripts.front().second, dest_script)));
     // P2SH-wrapped is the only valid choice for non-dynafed chains but still an
     // option for dynafed-enabled ones as well
-    if (!DeploymentActiveAfter(pwallet->chain().getTip(), ChainstateManager(util::SignalInterrupt(), chain_opts, block_opts), Consensus::DEPLOYMENT_DYNA_FED) ||
+    VersionBitsCache versionbitscache;
+    if (!DeploymentActiveAfter(pwallet->chain().getTip(), consensus, Consensus::DEPLOYMENT_DYNA_FED, versionbitscache) ||
                 fedpegscripts.front().first.IsPayToScriptHash()) {
         mainchain_dest = ScriptHash(GetScriptForDestination(mainchain_dest));
     }
