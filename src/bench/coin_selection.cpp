@@ -110,10 +110,6 @@ static void CoinSelection(benchmark::Bench& bench)
     });
 }
 
-static NodeContext testNode;
-static auto testChain = interfaces::MakeChain(testNode);
-static CWallet testWallet(testChain.get(), "", CreateMockableWalletDatabase());
-
 // Copied from src/wallet/test/coinselector_tests.cpp
 static void add_coin(const CAmount& nValue, int nInput, std::vector<OutputGroup>& set)
 {
