@@ -191,6 +191,7 @@ task:
     image: docker.io/ubuntu:24.04
     cpu: 8
     memory: 16G
+  timeout_in: 240m  # larger timeout, due to the high CPU demand
   env:
     << : *CIRRUS_EPHEMERAL_WORKER_TEMPLATE_ENV
     FILE_ENV: "./ci/test/00_setup_env_native_fuzz.sh"
