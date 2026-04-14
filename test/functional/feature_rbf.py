@@ -95,7 +95,7 @@ class ReplaceByFeeTest(BitcoinTestFramework):
         if confirmed:
             mempool_size = len(node.getrawmempool())
             while mempool_size > 0:
-                node.generate(1, invalid_call=False)
+                node.generate(1)
                 new_size = len(node.getrawmempool())
                 # Error out if we have something stuck in the mempool, as this
                 # would likely be a bug.
