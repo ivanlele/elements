@@ -818,7 +818,8 @@ class OrphanHandlingTest(BitcoinTestFramework):
         self.test_max_orphan_amount()
         self.test_orphan_handling_prefer_outbound()
         self.test_announcers_before_and_after()
-        self.test_parents_change()
+        # ELEMENTS: test_parents_change relies on RBF replacement cycling which is disabled on Liquid
+        # self.test_parents_change()
 
 
 if __name__ == '__main__':
