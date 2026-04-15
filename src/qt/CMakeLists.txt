@@ -236,7 +236,7 @@ target_link_libraries(elements-qt
 )
 
 import_plugins(elements-qt)
-set(installable_targets elements-qt)
+install_binary_component(elements-qt HAS_MANPAGE)
 if(WIN32)
   set_target_properties(elements-qt PROPERTIES WIN32_EXECUTABLE TRUE)
 endif()
@@ -252,17 +252,12 @@ if(WITH_MULTIPROCESS)
     bitcoin_node
     bitcoin_ipc
   )
-  import_plugins(elements-gui)
-  list(APPEND installable_targets elements-gui)
+  import_plugins(bitcoin-gui)
+  install_binary_component(elements-gui)
   if(WIN32)
     set_target_properties(elements-gui PROPERTIES WIN32_EXECUTABLE TRUE)
   endif()
 endif()
-
-install(TARGETS ${installable_targets}
-  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-  COMPONENT GUI
-)
 
 if(BUILD_GUI_TESTS)
   add_subdirectory(test)

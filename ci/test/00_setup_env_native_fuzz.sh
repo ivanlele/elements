@@ -15,7 +15,7 @@ export RUN_UNIT_TESTS=false
 export RUN_FUNCTIONAL_TESTS=false
 export RUN_FUZZ_TESTS=true
 export FUZZ_TESTS_CONFIG="--exclude=coins_view"  # work around https://github.com/bitcoin/bitcoin/issues/22233
-export GOAL="install"
+export GOAL="all"
 export CI_CONTAINER_CAP="--cap-add SYS_PTRACE"  # If run with (ASan + LSan), the container needs access to ptrace (https://github.com/google/sanitizers/issues/764)
 export BITCOIN_CONFIG="\
  -DBUILD_FOR_FUZZING=ON \

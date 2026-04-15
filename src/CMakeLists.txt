@@ -2,7 +2,6 @@
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or https://opensource.org/license/mit/.
 
-include(GNUInstallDirs)
 include(AddWindowsResources)
 
 configure_file(${PROJECT_SOURCE_DIR}/cmake/bitcoin-build-config.h.in bitcoin-build-config.h USE_SOURCE_PERMISSIONS @ONLY)
@@ -220,8 +219,8 @@ target_link_libraries(bitcoin_common
     $<$<PLATFORM_ID:Windows>:ws2_32>
 )
 
+include(InstallBinaryComponent)
 
-set(installable_targets)
 if(ENABLE_WALLET)
   add_subdirectory(wallet)
 
@@ -236,7 +235,7 @@ if(ENABLE_WALLET)
       core_interface
       "$<LINK_GROUP:RESCAN,bitcoin_node,bitcoin_wallet,bitcoin_common>"
     )
-    list(APPEND installable_targets elements-wallet)
+    install_binary_component(elements-wallet HAS_MANPAGE)
   endif()
 endif()
 
@@ -373,7 +372,7 @@ if(BUILD_DAEMON)
     bitcoin_node
     $<TARGET_NAME_IF_EXISTS:bitcoin_wallet>
   )
-  list(APPEND installable_targets elementsd)
+  install_binary_component(elementsd HAS_MANPAGE)
 endif()
 if(WITH_MULTIPROCESS AND BUILD_DAEMON)
   add_executable(elements-node
@@ -386,7 +385,7 @@ if(WITH_MULTIPROCESS AND BUILD_DAEMON)
     bitcoin_ipc
     $<TARGET_NAME_IF_EXISTS:bitcoin_wallet>
   )
-  list(APPEND installable_targets elements-node)
+  install_binary_component(elements-node)
 endif()
 
 if(WITH_MULTIPROCESS AND BUILD_TESTS)
@@ -429,7 +428,7 @@ if(BUILD_CLI)
     libevent::core
     libevent::extra
   )
-  list(APPEND installable_targets elements-cli)
+  install_binary_component(elements-cli HAS_MANPAGE)
 endif()
 
 
@@ -443,7 +442,7 @@ if(BUILD_TX)
     univalue
     elementssimplicity
   )
-  list(APPEND installable_targets elements-tx)
+  install_binary_component(elements-tx HAS_MANPAGE)
 endif()
 
 
@@ -456,7 +455,7 @@ if(BUILD_UTIL)
     bitcoin_util
     elementssimplicity
   )
-  list(APPEND installable_targets elements-util)
+  install_binary_component(elements-util HAS_MANPAGE)
 endif()
 
 
@@ -501,18 +500,4 @@ endif()
 
 if(BUILD_FUZZ_BINARY)
   add_subdirectory(test/fuzz)
-endif()
-
-
-install(TARGETS ${installable_targets}
-  RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-)
-unset(installable_targets)
-
-if(INSTALL_MAN)
-  # TODO: these stubs are no longer needed. man pages should be generated at install time.
-  install(DIRECTORY ../doc/man/
-    DESTINATION ${CMAKE_INSTALL_MANDIR}/man1
-    FILES_MATCHING PATTERN *.1
-  )
 endif()
