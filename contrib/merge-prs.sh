@@ -227,8 +227,8 @@ do
     ## Extract data and output what we're doing
     HASH=$(echo "$line" | cut -d ' ' -f 3)
     CHAIN=$(echo "$line" | cut -d ' ' -f 4)
-    PR_ID=$(echo "$line" | grep -o -P "#\d+" || true)
-    REPO=$(echo "$line" | grep -o -P '\S+(?=\s*#\d+)' || true)
+    PR_ID=$(echo "$line" | grep -o -P "#\d+" | head -1 || true)
+    REPO=$(echo "$line" | grep -o -P '\S+(?=\s*#\d+)' | head -1 || true)
 
 	GIT_HEAD=$(git rev-parse HEAD)
 
