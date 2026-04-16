@@ -313,9 +313,9 @@ do
 
     if [[ "$DO_TEST" == "1" ]]; then
         echo "Testing"
-        quietly "$BUILD_DIR"/src/qt/test/test_elements-qt || notify "fail test qt" 1
-        quietly "$BUILD_DIR"/src/test/test_bitcoin || notify "fail test bitcoin" 1
-        quietly "$BUILD_DIR"/src/bench/bench_bitcoin || notify "fail test bench" 1
+        quietly "$BUILD_DIR"/bin/test_elements-qt || notify "fail test qt" 1
+        quietly "$BUILD_DIR"/bin/test_bitcoin || notify "fail test bitcoin" 1
+        quietly "$BUILD_DIR"/bin/bench_bitcoin || notify "fail test bench" 1
         quietly "$BUILD_DIR"/test/util/test_runner.py || notify "fail test util" 1
         quietly "$BUILD_DIR"/test/util/rpcauth-test.py || notify "fail test rpc" 1
         echo "Functional testing"
