@@ -9,12 +9,12 @@ import tempfile
 import argparse
 
 BINARIES = [
-'src/elementsd',
-'src/elements-cli',
-'src/elements-tx',
-'src/elements-wallet',
-'src/elements-util',
-'src/qt/elements-qt',
+'bin/elementsd',
+'bin/elements-cli',
+'bin/elements-tx',
+'bin/elements-wallet',
+'bin/elements-util',
+'bin/elements-qt',
 ]
 
 parser = argparse.ArgumentParser(

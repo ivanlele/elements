@@ -202,8 +202,8 @@ cmake --build build --target deploy
 
 ## Running Elements Core
 
-Elements Core should now be available at `./src/elementsd`.
-If you compiled support for the GUI, it should be available at `./build/src/qt/elements-qt`.
+Elements Core should now be available at `./build/bin/elementsd`.
+If you compiled support for the GUI, it should be available at `./build/bin/elements-qt`.
 
 The first time you run `elementsd` or `elements-qt`, it will start downloading the blockchain.
 This process could take many hours, or even days on slower than average systems.
@@ -233,8 +233,8 @@ tail -f $HOME/Library/Application\ Support/Elements/debug.log
 ## Other commands:
 
 ```shell
-./src/elementsd -daemon      # Starts the elements daemon.
-./src/elements-cli --help    # Outputs a list of command-line options.
-./src/elements-cli help      # Outputs a list of RPC commands when the daemon is running.
-./src/qt/elements-qt -server # Starts the elements-qt server mode, allows elements-cli control
+./build/bin/elementsd -daemon      # Starts the elements daemon.
+./build/bin/elements-cli --help    # Outputs a list of command-line options.
+./build/bin/elements-cli help      # Outputs a list of RPC commands when the daemon is running.
+./build/bin/elements-qt -server # Starts the elements-qt server mode, allows elements-cli control
 ```
