@@ -721,6 +721,14 @@ struct MigrationData
     std::vector<std::unique_ptr<DescriptorScriptPubKeyMan>> desc_spkms;
     std::shared_ptr<CWallet> watchonly_wallet{nullptr};
     std::shared_ptr<CWallet> solvable_wallet{nullptr};
+
+    // ELEMENTS: Per legacy pegin claim, the (fedpegscript, claim_script)
+    // pair recovered at migration time. Captured here only; not persisted.
+    struct PeginScriptPair {
+        CScript fedpegscript;
+        CScript claim_script;
+    };
+    std::vector<PeginScriptPair> pegin_scripts;
 };
 
 } // namespace wallet

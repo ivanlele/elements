@@ -59,6 +59,7 @@
 #include <util/fs_helpers.h>
 #include <util/moneystr.h>
 #include <util/result.h>
+#include <util/strencodings.h>
 #include <util/string.h>
 #include <util/time.h>
 #include <util/translation.h>
@@ -5115,6 +5116,79 @@ bool DoMigration(CWallet& wallet, WalletContext& context, bilingual_str& error, 
     // Get all of the descriptors from the legacy wallet
     std::optional<MigrationData> data = wallet.GetDescriptorsForLegacy(error);
     if (data == std::nullopt) return false;
+
+    // ELEMENTS: Recover (fedpegscript, claim_script) pairs from the wallet's
+    // own historical pegin claims. The pegin witness preserves the original
+    // claim_script and the mainchain tx; combined with prevout.n that yields
+    // the exact mainchain scriptPubKey, which equals
+    // P2(W)SH(calculate_contract(fedpegscript, claim_script)) and pins down
+    // which fedpegscript was used. Only fedpegscripts still in the current
+    // valid window (GetValidFedpegScripts) can be matched; pairs whose
+    // fedpegscript has fully rotated out are skipped.
+    std::vector<CScript> candidate_fedpegscripts;
+    if (context.chain != nullptr) {
+        const Consensus::Params& consensus = Params().GetConsensus();
+        if (const CBlockIndex* tip = context.chain->getTip()) {
+            for (const auto& [_, fps] : GetValidFedpegScripts(tip, consensus, /*nextblock_validation=*/true)) {
+                candidate_fedpegscripts.push_back(fps);
+            }
+        }
+    }
+
+    const auto& resolve_fps = [&](const CScript& mainchain_spk, const CScript& claim_script) -> CScript {
+        for (const CScript& fps : candidate_fedpegscripts) {
+            const CScript tweaked = calculate_contract(fps, claim_script);
+            const CScript p2wsh = GetScriptForDestination(WitnessV0ScriptHash(tweaked));
+            if (mainchain_spk == p2wsh) return fps;
+            if (mainchain_spk == GetScriptForDestination(ScriptHash(p2wsh))) return fps;
+        }
+        return CScript{};
+    };
+
+    std::set<std::pair<std::vector<unsigned char>, std::vector<unsigned char>>> seen;
+    for (const auto& [wtxid, wtx] : wallet.mapWallet) {
+        if (!wtx.tx) continue;
+        const CTransaction& tx = *wtx.tx;
+        const size_t n_wits = tx.witness.vtxinwit.size();
+        for (size_t i = 0; i < tx.vin.size(); ++i) {
+            if (!tx.vin[i].m_is_pegin || i >= n_wits) continue;
+            const CScriptWitness& w = tx.witness.vtxinwit[i].m_pegin_witness;
+            if (w.IsNull()) continue;
+
+            CAmount value{0};
+            CAsset asset;
+            uint256 genesis_hash;
+            CScript claim_script;
+            std::variant<std::monostate, Sidechain::Bitcoin::CTransactionRef, CTransactionRef> mc_tx;
+            std::variant<std::monostate, Sidechain::Bitcoin::CMerkleBlock, CMerkleBlock> mc_proof;
+            if (!DecomposePeginWitness(w, value, asset, genesis_hash, claim_script, mc_tx, mc_proof)) continue;
+
+            const uint32_t n = tx.vin[i].prevout.n;
+            CScript mainchain_spk;
+            if (auto* btc = std::get_if<Sidechain::Bitcoin::CTransactionRef>(&mc_tx)) {
+                if (!*btc || n >= (*btc)->vout.size()) continue;
+                mainchain_spk = (*btc)->vout[n].scriptPubKey;
+            } else if (auto* elem = std::get_if<CTransactionRef>(&mc_tx)) {
+                if (!*elem || n >= (*elem)->vout.size()) continue;
+                mainchain_spk = (*elem)->vout[n].scriptPubKey;
+            } else {
+                continue;
+            }
+
+            CScript fps = resolve_fps(mainchain_spk, claim_script);
+            if (fps.empty()) continue;
+            if (!seen.emplace(std::vector<unsigned char>(fps.begin(), fps.end()),
+                              std::vector<unsigned char>(claim_script.begin(), claim_script.end())).second) {
+                continue;
+            }
+            data->pegin_scripts.push_back({fps, claim_script});
+            wallet.WalletLogPrintf("Pegin pair: fedpegscript=%s claim_script=%s\n",
+                                   HexStr(fps), HexStr(claim_script));
+        }
+    }
+
+    wallet.WalletLogPrintf("Captured %u (fedpegscript, claim_script) pair(s) from wallet pegin history.\n",
+                           (unsigned)data->pegin_scripts.size());
 
     // Create the watchonly and solvable wallets if necessary
     if (data->watch_descs.size() > 0 || data->solvable_descs.size() > 0) {
