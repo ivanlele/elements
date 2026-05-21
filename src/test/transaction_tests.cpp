@@ -781,15 +781,21 @@ BOOST_AUTO_TEST_CASE(test_IsStandard)
     key.MakeNewKey(true);
     t.vout[0].scriptPubKey = GetScriptForDestination(PKHash(key.GetPubKey()));
 
-    constexpr auto CheckIsStandard = [](const auto& t) {
+    constexpr auto CheckIsStandard = [](const auto& t, const unsigned int max_op_return_relay = MAX_OP_RETURN_RELAY) {
+        const auto old_val = nMaxDatacarrierBytes;
+        nMaxDatacarrierBytes = max_op_return_relay;
         std::string reason;
         BOOST_CHECK(IsStandardTx(CTransaction(t), reason));
         BOOST_CHECK(reason.empty());
+        nMaxDatacarrierBytes = old_val;
     };
-    constexpr auto CheckIsNotStandard = [](const auto& t, const std::string& reason_in) {
+    constexpr auto CheckIsNotStandard = [](const auto& t, const std::string& reason_in, const unsigned int max_op_return_relay = MAX_OP_RETURN_RELAY) {
+        const auto old_val = nMaxDatacarrierBytes;
+        nMaxDatacarrierBytes = max_op_return_relay;
         std::string reason;
         BOOST_CHECK(!IsStandardTx(CTransaction(t), reason));
         BOOST_CHECK_EQUAL(reason_in, reason);
+        nMaxDatacarrierBytes = old_val;
     };
 
     CheckIsStandard(t);
@@ -836,15 +842,10 @@ BOOST_AUTO_TEST_CASE(test_IsStandard)
     t.vout[0].scriptPubKey = CScript() << OP_1;
     CheckIsNotStandard(t, "scriptpubkey");
 
-    // MAX_OP_RETURN_RELAY-byte TxoutType::NULL_DATA (standard)
+    // 83-byte TxoutType::NULL_DATA (standard with default nMaxDatacarrierBytes)
     t.vout[0].scriptPubKey = CScript() << OP_RETURN << ParseHex("04678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef3804678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef38");
-    BOOST_CHECK_EQUAL(MAX_OP_RETURN_RELAY, t.vout[0].scriptPubKey.size());
+    BOOST_CHECK_EQUAL(83, t.vout[0].scriptPubKey.size());
     CheckIsStandard(t);
-
-    // MAX_OP_RETURN_RELAY+1-byte TxoutType::NULL_DATA (non-standard)
-    t.vout[0].scriptPubKey = CScript() << OP_RETURN << ParseHex("04678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef3804678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef3800");
-    BOOST_CHECK_EQUAL(MAX_OP_RETURN_RELAY + 1, t.vout[0].scriptPubKey.size());
-    CheckIsNotStandard(t, "scriptpubkey");
 
     // Data payload can be encoded in any way...
     t.vout[0].scriptPubKey = CScript() << OP_RETURN << ParseHex("");

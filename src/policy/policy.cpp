@@ -67,6 +67,14 @@ bool IsDust(const CTxOut& txout, const CFeeRate& dustRelayFeeIn)
     return (txout.nValue.GetAmount() < GetDustThreshold(txout, dustRelayFeeIn));
 }
 
+std::vector<uint32_t> GetDust(const CTransaction& tx, CFeeRate dust_relay_rate)
+{
+    std::vector<uint32_t> dust_outputs;
+    for (uint32_t i{0}; i < tx.vout.size(); ++i) {
+        if (IsDust(tx.vout[i], dust_relay_rate)) dust_outputs.push_back(i);
+    }
+    return dust_outputs;
+}
 bool IsStandard(const CScript& scriptPubKey, TxoutType& whichType)
 {
     std::vector<std::vector<unsigned char> > vSolutions;
@@ -87,9 +95,7 @@ bool IsStandard(const CScript& scriptPubKey, TxoutType& whichType)
             scriptPubKey.IsPegoutScript(Params().ParentGenesisBlockHash()) ) {
         // If we're enforcing pak let through larger peg-out scripts
         return true;
-    } else if (whichType == TxoutType::NULL_DATA &&
-               (!fAcceptDatacarrier || scriptPubKey.size() > nMaxDatacarrierBytes)) {
-          return false;
+
     }
 
     return true;
@@ -134,6 +140,7 @@ bool IsStandardTx(const CTransaction& tx, bool permit_bare_multisig, const CFeeR
 
     CChainParams params = Params();
     unsigned int nDataOut = 0;
+    unsigned int datacarrier_bytes_left = fAcceptDatacarrier ? nMaxDatacarrierBytes : 0;
     TxoutType whichType;
     for (const CTxOut& txout : tx.vout) {
         if (!::IsStandard(txout.scriptPubKey, whichType)) {
@@ -143,6 +150,12 @@ bool IsStandardTx(const CTransaction& tx, bool permit_bare_multisig, const CFeeR
 
         if (whichType == TxoutType::NULL_DATA) {
             nDataOut++;
+            unsigned int size = txout.scriptPubKey.size();
+            if (size > datacarrier_bytes_left) {
+                reason = "datacarrier";
+                return false;
+            }
+            datacarrier_bytes_left -= size;
         } else if ((whichType == TxoutType::MULTISIG) && (!permit_bare_multisig)) {
             reason = "bare-multisig";
             return false;
@@ -152,7 +165,7 @@ bool IsStandardTx(const CTransaction& tx, bool permit_bare_multisig, const CFeeR
         }
     }
 
-    // only one OP_RETURN txout is permitted
+    // only one OP_RETURN txout is permitted (per-chain control)
     if (!params.GetMultiDataPermitted() && nDataOut > 1) {
         reason = "multi-op-return";
         return false;
